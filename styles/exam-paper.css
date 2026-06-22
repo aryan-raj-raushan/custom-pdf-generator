@@ -1,0 +1,58 @@
+/* styles/exam-paper.css
+   Add this import to your app's global CSS (e.g. app/globals.css):
+     @import "./exam-paper.css";
+
+   IMPORTANT — CSS @import ordering:
+   Browsers (and Tailwind v4's CSS processor) require @import rules to
+   appear before any other CSS rule in a stylesheet. If you paste this
+   file's Google Fonts @import below other rules in globals.css, move the
+   font @import line to the very top of globals.css instead, e.g.:
+
+     @import "tailwindcss";
+     @import url("https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap");
+     @import "./exam-paper.css";
+
+   Prefer the next/font setup in lib/fonts.ts instead — it self-hosts the
+   fonts (no runtime Google Fonts request, no ordering footgun, and more
+   reliable font-loading timing right before PDF rasterisation).
+
+   Fonts:
+   - "Tinos" (metric-compatible with Times New Roman) for the English paper body —
+     gives that classic exam-paper serif look and renders identically in html2canvas.
+   - "Noto Sans Devanagari" for Hindi text — required for correct conjunct/matra
+     rendering in both the on-screen preview and the rasterised PDF export.
+
+   KaTeX:
+   - Run `npm install katex` then add `import "katex/dist/katex.min.css"` once,
+     near the top of your root layout (app/layout.tsx or _app.tsx).
+*/
+
+:root {
+  --font-paper: "Tinos", "Times New Roman", serif;
+  --font-devanagari: "Noto Sans Devanagari", "Tinos", sans-serif;
+}
+
+.font-devanagari {
+  font-family: var(--font-devanagari);
+}
+
+/* Ensures html2canvas rasterises Devanagari glyphs crisply at 2x scale */
+.pdf-page {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* KaTeX inline math should sit on the text baseline without extra leading */
+.katex-inline {
+  line-height: 1;
+}
+
+/* Print-safe page breaks if the preview is ever printed directly (Ctrl+P)
+   instead of exported via the Save as PDF button. */
+@media print {
+  .pdf-page {
+    box-shadow: none !important;
+    margin: 0;
+    page-break-after: always;
+  }
+}
