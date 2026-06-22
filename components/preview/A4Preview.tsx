@@ -3,6 +3,7 @@
 
 import React, { useMemo, useRef } from "react";
 import { ExamPaper, Question } from "@/types/exam";
+import { PREVIEW_COLORS } from "@/lib/previewTheme";
 import { PaperHeader, InstructionsBlock } from "./PaperHeader";
 import { QuestionBlock } from "./QuestionBlock";
 import { useAutoPaginate } from "@/lib/usePagination";
@@ -97,7 +98,10 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(({ pap
               return (
                 <React.Fragment key={id}>
                   {f.isFirstInSection && f.sectionTitleEn && (
-                    <div className="col-span-2 -mb-1 mt-1 border-b border-black/50 pb-0.5 text-[11px] font-bold uppercase tracking-wide">
+                    <div
+                      className="col-span-2 -mb-1 mt-1 border-b pb-0.5 text-[11px] font-bold uppercase tracking-wide"
+                      style={{ borderColor: PREVIEW_COLORS.ruleMedium }}
+                    >
                       {f.sectionTitleEn}
                       {paper.metadata.language !== "en" && f.sectionTitleHi && (
                         <span className="font-devanagari ml-2 font-normal normal-case">{f.sectionTitleHi}</span>
@@ -134,16 +138,22 @@ function Page({
 }>) {
   return (
     <div
-      className="pdf-page relative bg-white text-black shadow-md"
+      className="pdf-page relative"
       style={{
         width: 794,
         minHeight: 1123,
         padding: "34px 38px 44px",
+        backgroundColor: PREVIEW_COLORS.pageBackground,
+        color: PREVIEW_COLORS.pageText,
+        boxShadow: PREVIEW_COLORS.pageShadow,
         fontFamily: "var(--font-paper, 'Tinos', 'Times New Roman', serif)",
       }}
     >
       {children}
-      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px] text-stone-400">
+      <div
+        className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
+        style={{ color: PREVIEW_COLORS.mutedText }}
+      >
         <span>Custom PDF Creator</span>
         <span>
           Page {pageNumber} of {totalPages}
@@ -155,7 +165,10 @@ function Page({
 
 function RunningHeader({ metadata }: Readonly<{ metadata: ExamPaper["metadata"] }>) {
   return (
-    <div className="flex items-center justify-between border-b border-black/60 pb-1 text-[10px] font-medium">
+    <div
+      className="flex items-center justify-between border-b pb-1 text-[10px] font-medium"
+      style={{ borderColor: PREVIEW_COLORS.ruleStrong }}
+    >
       <span>{metadata.examTitle}</span>
       <span>{metadata.examCode}</span>
     </div>

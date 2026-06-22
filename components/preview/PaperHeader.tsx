@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { PREVIEW_COLORS } from "@/lib/previewTheme";
 import { ExamMetadata } from "@/types/exam";
 
 export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) {
@@ -9,7 +10,7 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
   const showEn = metadata.language !== "hi";
 
   return (
-    <div className="select-none border-b-2 border-black pb-2">
+    <div className="select-none border-b-2 pb-2" style={{ borderColor: PREVIEW_COLORS.pageText }}>
       {/* Top strip: emblem, org name, set code */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -29,7 +30,10 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
         <div className="text-right text-[10px] leading-tight">
           {metadata.examCode && <p className="font-semibold">{metadata.examCode}</p>}
           {metadata.setCode && (
-            <p className="mt-0.5 inline-block rounded border border-black px-1.5 py-0.5 font-bold">
+            <p
+              className="mt-0.5 inline-block rounded border px-1.5 py-0.5 font-bold"
+              style={{ borderColor: PREVIEW_COLORS.pageText }}
+            >
               SET — {metadata.setCode}
             </p>
           )}
@@ -43,7 +47,10 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
       </div>
 
       {/* Meta strip: duration / marks / date */}
-      <div className="mt-2 flex items-center justify-between border-y border-black/70 py-1 text-[10.5px] font-medium">
+      <div
+        className="mt-2 flex items-center justify-between border-y py-1 text-[10.5px] font-medium"
+        style={{ borderColor: PREVIEW_COLORS.ruleBold }}
+      >
         <span>
           Time: <strong>{metadata.duration}</strong>
         </span>
@@ -63,7 +70,7 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
               <span className="font-semibold">Roll No.</span>
               <div className="flex">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <span key={i} className="h-5 w-4 border border-black/60" />
+                  <span key={i} className="h-5 w-4 border" style={{ borderColor: PREVIEW_COLORS.ruleStrong }} />
                 ))}
               </div>
             </div>
@@ -71,7 +78,7 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
           {metadata.candidateNameLabel && (
             <div className="flex flex-1 items-end gap-1.5">
               <span className="shrink-0 font-semibold">Candidate Name</span>
-              <span className="flex-1 border-b border-dotted border-black/60" />
+              <span className="flex-1 border-b border-dotted" style={{ borderColor: PREVIEW_COLORS.ruleStrong }} />
             </div>
           )}
         </div>
@@ -100,7 +107,7 @@ export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadat
   if (metadata.generalInstructions.length === 0) return null;
 
   return (
-    <div className="mt-2 border border-black/70 p-2 text-[10px] leading-snug">
+    <div className="mt-2 border p-2 text-[10px] leading-snug" style={{ borderColor: PREVIEW_COLORS.ruleBold }}>
       <p className="mb-1 text-center text-[10.5px] font-bold uppercase">
         General Instructions{showHi ? " / सामान्य निर्देश" : ""}
       </p>
@@ -109,7 +116,7 @@ export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadat
           <li key={i}>
             {showEn && <span>{ins}</span>}
             {showHi && metadata.generalInstructionsHi?.[i] && (
-              <span className="font-devanagari block text-[9.5px] text-stone-700">
+              <span className="font-devanagari block text-[9.5px]" style={{ color: PREVIEW_COLORS.quaternaryText }}>
                 {metadata.generalInstructionsHi[i]}
               </span>
             )}

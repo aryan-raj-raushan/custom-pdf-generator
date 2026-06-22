@@ -37,7 +37,8 @@
 }
 
 /* Ensures html2canvas rasterises Devanagari glyphs crisply at 2x scale */
-.pdf-page {
+.pdf-page,
+.answer-key-page {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -50,7 +51,8 @@
 /* Print-safe page breaks if the preview is ever printed directly (Ctrl+P)
    instead of exported via the Save as PDF button. */
 @media print {
-  .pdf-page {
+  .pdf-page,
+  .answer-key-page {
     box-shadow: none !important;
     margin: 0;
     page-break-after: always;

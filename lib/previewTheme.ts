@@ -1,0 +1,16 @@
+export const PREVIEW_COLORS = {
+  pageBackground: "#ffffff",
+  pageText: "#000000",
+  pageShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
+  mutedText: "#a8a29e",
+  secondaryText: "#78716c",
+  tertiaryText: "#57534e",
+  quaternaryText: "#44403c",
+  subduedSurface: "#f5f5f4",
+  successText: "#047857",
+  warningFill: "#f59e0b",
+  ruleSoft: "rgba(0, 0, 0, 0.4)",
+  ruleMedium: "rgba(0, 0, 0, 0.5)",
+  ruleStrong: "rgba(0, 0, 0, 0.6)",
+  ruleBold: "rgba(0, 0, 0, 0.7)",
+} as const;

@@ -1,9 +1,9 @@
-// components/preview/AnswerKeyPreview.tsx
 "use client";
 
 import React, { useMemo } from "react";
-import { ExamPaper } from "@/types/exam";
+import { PREVIEW_COLORS } from "@/lib/previewTheme";
 import { MathText } from "@/lib/renderMath";
+import { ExamPaper } from "@/types/exam";
 
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
@@ -35,7 +35,9 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
         const letterIndex = q.options?.findIndex((o) => o.isCorrect) ?? -1;
         out.push({
           number: n,
-          letter: q.correctAnswerLetter ?? (letterIndex >= 0 ? String.fromCharCode(65 + letterIndex) : undefined),
+          letter:
+            q.correctAnswerLetter ??
+            (letterIndex >= 0 ? String.fromCharCode(65 + letterIndex) : undefined),
           optionText: correctOption ? correctOption.textEn || correctOption.textHi : undefined,
           solutionEn: q.solutionEn,
           solutionHi: q.solutionHi,
@@ -47,7 +49,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
     return out;
   }, [paper.sections]);
 
-  // Simple single-column flow for the answer key — split into A4 pages by a
+  // Simple single-column flow for the answer key - split into A4 pages by a
   // generous fixed row budget rather than exact measurement, since answer
   // key rows are short and uniform compared to full question blocks.
   const ROWS_PER_PAGE_FIRST = 14;
@@ -72,27 +74,46 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
       {pages.map((pageRows, pageIndex) => (
         <div
           key={pageIndex}
-          className="answer-key-page relative bg-white text-black shadow-md"
+          className="answer-key-page relative"
           style={{
             width: A4_WIDTH_PX,
             minHeight: 1123,
             padding: "34px 38px 44px",
+            backgroundColor: PREVIEW_COLORS.pageBackground,
+            color: PREVIEW_COLORS.pageText,
+            boxShadow: PREVIEW_COLORS.pageShadow,
             fontFamily: "var(--font-paper, 'Tinos', 'Times New Roman', serif)",
           }}
         >
           {pageIndex === 0 && (
-            <div className="mb-4 border-b-2 border-black pb-2 text-center">
-              <h1 className="text-base font-bold uppercase">Answer Key & Solutions</h1>
-              {showEn && paper.metadata.examTitle && <p className="text-[12px] text-stone-600">{paper.metadata.examTitle}</p>}
-              {showHi && paper.metadata.examTitleHi && (
-                <p className="font-devanagari text-[12px] text-stone-600">{paper.metadata.examTitleHi}</p>
+            <div
+              className="mb-4 border-b-2 pb-2 text-center"
+              style={{ borderColor: PREVIEW_COLORS.pageText }}
+            >
+              <h1 className="text-base font-bold uppercase">Answer Key &amp; Solutions</h1>
+              {showEn && paper.metadata.examTitle && (
+                <p className="text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+                  {paper.metadata.examTitle}
+                </p>
               )}
-              {paper.metadata.examCode && <p className="text-[10px] text-stone-400">{paper.metadata.examCode}</p>}
+              {showHi && paper.metadata.examTitleHi && (
+                <p className="font-devanagari text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+                  {paper.metadata.examTitleHi}
+                </p>
+              )}
+              {paper.metadata.examCode && (
+                <p className="text-[10px]" style={{ color: PREVIEW_COLORS.mutedText }}>
+                  {paper.metadata.examCode}
+                </p>
+              )}
             </div>
           )}
           {pageIndex > 0 && (
-            <div className="mb-3 flex items-center justify-between border-b border-black/60 pb-1 text-[10px] font-medium">
-              <span>Answer Key & Solutions — {paper.metadata.examTitle}</span>
+            <div
+              className="mb-3 flex items-center justify-between border-b pb-1 text-[10px] font-medium"
+              style={{ borderColor: PREVIEW_COLORS.ruleStrong }}
+            >
+              <span>Answer Key &amp; Solutions - {paper.metadata.examTitle}</span>
             </div>
           )}
 
@@ -100,28 +121,41 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             {pageRows.map((row) => (
               <div key={row.number} className="break-inside-avoid">
                 {row.isFirstInSection && row.sectionTitleEn && (
-                  <div className="mb-1 mt-1.5 border-b border-black/40 pb-0.5 text-[10.5px] font-bold uppercase tracking-wide text-stone-700">
+                  <div
+                    className="mb-1 mt-1.5 border-b pb-0.5 text-[10.5px] font-bold uppercase tracking-wide"
+                    style={{
+                      borderColor: PREVIEW_COLORS.ruleSoft,
+                      color: PREVIEW_COLORS.quaternaryText,
+                    }}
+                  >
                     {row.sectionTitleEn}
                   </div>
                 )}
                 <div className="flex gap-2 text-[11px] leading-snug">
-                  <span className="flex h-5 w-6 shrink-0 items-center justify-center rounded bg-stone-100 text-[10px] font-bold">
+                  <span
+                    className="flex h-5 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold"
+                    style={{ backgroundColor: PREVIEW_COLORS.subduedSurface }}
+                  >
                     {row.number}
                   </span>
                   <div className="flex-1">
                     <p>
                       <span className="font-semibold">Answer: </span>
                       {row.letter ? (
-                        <span className="font-bold text-emerald-700">
+                        <span className="font-bold" style={{ color: PREVIEW_COLORS.successText }}>
                           ({row.letter}){row.optionText ? ` ${row.optionText}` : ""}
                         </span>
                       ) : (
-                        <span className="italic text-stone-400">Not specified</span>
+                        <span className="italic" style={{ color: PREVIEW_COLORS.mutedText }}>
+                          Not specified
+                        </span>
                       )}
                     </p>
                     {(row.solutionEn || row.solutionHi) && (
-                      <p className="mt-0.5 text-stone-600">
-                        <span className="font-semibold text-stone-700">Solution: </span>
+                      <p className="mt-0.5" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+                        <span className="font-semibold" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+                          Solution:{" "}
+                        </span>
                         {row.solutionEn && <MathText text={row.solutionEn} />}
                         {row.solutionHi && (
                           <span className="font-devanagari block text-[10px]">
@@ -131,7 +165,9 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                       </p>
                     )}
                     {!row.solutionEn && !row.solutionHi && (
-                      <p className="mt-0.5 text-[10px] italic text-stone-400">No solution provided</p>
+                      <p className="mt-0.5 text-[10px] italic" style={{ color: PREVIEW_COLORS.mutedText }}>
+                        No solution provided
+                      </p>
                     )}
                   </div>
                 </div>
@@ -139,8 +175,11 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             ))}
           </div>
 
-          <div className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px] text-stone-400">
-            <span>Custom PDF Creator — Answer Key</span>
+          <div
+            className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
+            style={{ color: PREVIEW_COLORS.mutedText }}
+          >
+            <span>Custom PDF Creator - Answer Key</span>
             <span>
               Page {pageIndex + 1} of {pages.length}
             </span>

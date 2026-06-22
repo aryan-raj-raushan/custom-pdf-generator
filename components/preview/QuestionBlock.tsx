@@ -3,6 +3,7 @@
 
 import React from "react";
 import { Question, ExamMetadata } from "@/types/exam";
+import { PREVIEW_COLORS } from "@/lib/previewTheme";
 import { MathText } from "@/lib/renderMath";
 
 interface QuestionBlockProps {
@@ -37,7 +38,8 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
             {showFlagIndicator && hasFlags && (
               <span
                 title="This question was imported with unresolved issues"
-                className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-super"
+                className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full align-super"
+                style={{ backgroundColor: PREVIEW_COLORS.warningFill }}
               />
             )}
           </span>
@@ -45,11 +47,13 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
             {showEn && question.textEn && (
               <p>
                 {question.hasMath ? <MathText text={question.textEn} /> : question.textEn}
-                <span className="ml-1 font-medium text-stone-500">[{marks}]</span>
+                <span className="ml-1 font-medium" style={{ color: PREVIEW_COLORS.secondaryText }}>
+                  [{marks}]
+                </span>
               </p>
             )}
             {showHi && question.textHi && (
-              <p className="font-devanagari text-stone-700">
+              <p className="font-devanagari" style={{ color: PREVIEW_COLORS.quaternaryText }}>
                 {question.hasMath ? <MathText text={question.textHi} /> : question.textHi}
               </p>
             )}
@@ -69,7 +73,10 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
                         <span>{question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}</span>
                       )}
                       {showHi && opt.textHi && (
-                        <span className="font-devanagari block text-[10px] text-stone-600">
+                        <span
+                          className="font-devanagari block text-[10px]"
+                          style={{ color: PREVIEW_COLORS.tertiaryText }}
+                        >
                           {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
                         </span>
                       )}
@@ -82,7 +89,7 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
             {(question.type === "short" || question.type === "long") && (
               <div className="mt-1.5 flex flex-col gap-2.5">
                 {Array.from({ length: question.answerSpaceLines ?? 3 }).map((_, i) => (
-                  <span key={i} className="block border-b border-dotted border-black/40" />
+                  <span key={i} className="block border-b border-dotted" style={{ borderColor: PREVIEW_COLORS.ruleSoft }} />
                 ))}
               </div>
             )}
