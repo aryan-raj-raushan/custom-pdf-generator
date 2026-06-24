@@ -109,6 +109,7 @@ function NewPaperModal({
 
   React.useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName("");
       setError("");
       setLoading(false);
@@ -310,6 +311,7 @@ function RenameModal({
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (paper) setName(paper.name);
   }, [paper]);
 

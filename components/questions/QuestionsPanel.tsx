@@ -35,6 +35,7 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
     if (!highlightedQuestionId) return;
     const owningSection = sections.find((s) => s.questions.some((q) => q.id === highlightedQuestionId));
     if (owningSection && collapsed[owningSection.id]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed((c) => ({ ...c, [owningSection.id]: false }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +172,7 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
                                       showHindi={showHindi}
                                       onChange={(patch) => updateQuestion(section.id, q.id, patch)}
                                       onDelete={() => deleteQuestion(section.id, q.id)}
-                                      dragHandleProps={dragProvided.dragHandleProps as any}
+                                      dragHandleProps={dragProvided.dragHandleProps}
                                       isHighlighted={q.id === highlightedQuestionId}
                                     />
                                   </div>

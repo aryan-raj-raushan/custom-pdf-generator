@@ -29,6 +29,7 @@ export function PreviewPanel({ paper, previewRef, answerKeyRef, highlightedQuest
   // briefly rather than assuming the node exists on the next tick.
   useEffect(() => {
     if (!highlightedQuestionId || jumpToken === undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode("paper");
 
     let attempts = 0;
