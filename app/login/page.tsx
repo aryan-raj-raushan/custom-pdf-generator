@@ -1,3 +1,4 @@
+
 // app/login/page.tsx
 "use client";
 
@@ -34,65 +35,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo mark */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-900 text-white shadow-sm">
-            <FileText size={20} />
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      {/* Background Glow */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-100 opacity-70 blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        {/* Logo */}
+        <div className="mb-8 flex flex-col items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white shadow-sm">
+            <FileText size={22} />
           </div>
+
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-stone-900">Exam Creator</h1>
-            <p className="text-sm text-stone-400">Sign in to continue</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Exam Creator
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Sign in to access your dashboard
+            </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-stone-600" htmlFor="username">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username */}
+          <div>
+            <label
+              htmlFor="username"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
               Username
             </label>
+
             <input
               id="username"
               type="text"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 outline-none placeholder:text-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
-              placeholder="admin"
+              placeholder="Enter your username"
               required
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-stone-600" htmlFor="password">
+          {/* Password */}
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
               Password
             </label>
+
             <input
               id="password"
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 outline-none placeholder:text-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               required
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
+          {/* Error */}
           {error && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
-            </p>
+            </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-800 disabled:opacity-60"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-black text-sm font-semibold text-white transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? <Loader2 size={15} className="animate-spin" /> : null}
-            {loading ? "Signing in…" : "Sign in"}
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </div>
