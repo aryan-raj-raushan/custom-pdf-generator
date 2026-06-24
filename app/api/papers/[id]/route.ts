@@ -24,6 +24,8 @@ function buildMeta(paper: ExamPaper, totalQuestions: number) {
         sections: paper.sections.length,
         date: paper.metadata.date,
         language: paper.metadata.language,
+        columns: (paper.metadata.columns ?? 2) as 1 | 2 | 3,
+        fontSize: (paper.metadata.fontSize ?? 11) as number,
     };
 }
 

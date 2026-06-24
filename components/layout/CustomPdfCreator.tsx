@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { MetadataForm } from "@/components/metadata/MetaDataForm";
 import { QuestionsPanel } from "@/components/questions/QuestionsPanel";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
+import { ColumnCount } from "@/components/preview/A4Preview";
 import { SaveAsPdfButton } from "@/components/layout/SaveAsPdfButton";
 import { BulkImportModal } from "@/components/import/BulkImportModal";
 import { ImportIssuesPanel, ImportSummaryBadge } from "@/components/import/ImportIssuesPanel";
@@ -71,6 +72,8 @@ export function createEmptyMetadata(): ExamMetadata {
     negativeMarking: { enabled: true, value: 0.25 },
     marksPerQuestion: 1,
     language: "bilingual",
+    columns: 2, // default layout
+    fontSize: 11,
   };
 }
 
@@ -140,7 +143,6 @@ export function CustomPdfCreator({
   initialName,
   userPermission,
 }: Readonly<CustomPdfCreatorProps>) {
-  console.log(userPermission);
   const canEdit = userPermission !== "view";
   const router = useRouter();
   const [paper, setPaper] = useState<ExamPaper>(initialPaper ?? DEFAULT_PAPER);
@@ -218,6 +220,25 @@ export function CustomPdfCreator({
         ),
       })),
     }));
+  }
+
+  /**
+   * Called by PreviewPanel when the user picks a different column count.
+   * Writes the choice into paper.metadata.columns so it's included in the
+   * next save payload — no extra round-trip needed.
+   */
+  function handleColumnsChange(columns: ColumnCount) {
+    setPaper((p) => ({
+      ...p,
+      metadata: { ...p.metadata, columns },
+    }));
+  }
+
+  function handleFontSizeChange(fontSize: number) {
+    setPaper((p) => ({
+      ...p,
+      metadata: {...p.metadata, fontSize}
+    }))
   }
 
   async function handleSave(status: "draft" | "saved") {
@@ -370,7 +391,7 @@ export function CustomPdfCreator({
           </div>
 
           {!canEdit ? (
-            <div className=" h-full inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1.5px]">
+            <div className="h-full inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1.5px]">
               <div className="flex flex-col items-center gap-2 rounded-xl border border-stone-200 bg-white px-6 py-5 shadow-sm">
                 <Lock size={18} className="text-stone-400" />
                 <p className="text-sm font-medium text-stone-700">View-only access</p>
@@ -401,12 +422,8 @@ export function CustomPdfCreator({
                   />
                 </>
               )}
-
-              {/* View-only overlay — covers the entire left panel */}
-
             </div>
-          )
-          }
+          )}
         </div>
 
         {/* Preview panel — always interactive */}
@@ -417,6 +434,8 @@ export function CustomPdfCreator({
             answerKeyRef={answerKeyRef}
             highlightedQuestionId={highlightedQuestionId}
             jumpToken={jumpToken}
+            onColumnsChange={handleColumnsChange}
+            onFontSizeChange={handleFontSizeChange}
           />
         </div>
       </div>

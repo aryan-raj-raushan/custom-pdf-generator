@@ -11,12 +11,16 @@ export function useAutoPaginate(
         reservedFirstPagePx: number;
         reservedOtherPagePx: number;
         pageHeightPx?: number;
+        columns?: number; // 1 | 2 | 3 — default 2
+        fontSize?: number; // 10 - 16 -- default 11
     },
 ) {
     const {
         reservedFirstPagePx,
         reservedOtherPagePx,
         pageHeightPx = A4_PAGE_HEIGHT_PX,
+        columns = 2,
+        fontSize = 11,
     } = options;
 
     const [pages, setPages] = useState<string[][]>([blockIds]);
@@ -43,26 +47,28 @@ export function useAutoPaginate(
             if (nodes.length !== blockIds.length) {
                 // Not all blocks mounted yet — retry next frame
                 rafRef.current = requestAnimationFrame(() => {
-                    // trigger re-measure by bumping state minimally
                     setPages((prev) => [...prev]);
                 });
                 return;
             }
 
-            // Questions render in a 2-column grid. Measure pairs: only the taller
-            // sibling in each column-pair consumes vertical space.
+            // Group nodes into rows of `columns` width.
+            // For each row, the tallest cell defines the row height.
             const rowHeights: { ids: string[]; height: number }[] = [];
-            for (let i = 0; i < nodes.length; i += 2) {
-                const leftH = nodes[i].getBoundingClientRect().height;
-                const rightH =
-                    nodes[i + 1]?.getBoundingClientRect().height ?? 0;
-                const rowH = Math.max(leftH, rightH) + 8; // +8 for gap-y
-                const ids = [blockIds[i]];
-                if (blockIds[i + 1]) ids.push(blockIds[i + 1]);
-                rowHeights.push({ ids, height: rowH });
+            for (let i = 0; i < nodes.length; i += columns) {
+                let rowH = 0;
+                const ids: string[] = [];
+                for (let c = 0; c < columns; c++) {
+                    const node = nodes[i + c];
+                    if (!node) break;
+                    const h = node.getBoundingClientRect().height;
+                    if (h > rowH) rowH = h;
+                    ids.push(blockIds[i + c]);
+                }
+                rowHeights.push({ ids, height: rowH + 8 }); // +8 for gap-y
             }
 
-            // Now paginate by row (not by individual question)
+            // Paginate by row
             const result: string[][] = [[]];
             let currentHeight = 0;
             let pageIndex = 0;
@@ -94,6 +100,8 @@ export function useAutoPaginate(
         reservedFirstPagePx,
         reservedOtherPagePx,
         pageHeightPx,
+        columns,
+        fontSize,
     ]);
 
     return pages;

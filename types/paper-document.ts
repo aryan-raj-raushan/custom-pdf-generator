@@ -20,6 +20,8 @@ export interface PaperDocument {
         sections: number;
         date: string;
         language: ExamPaper["metadata"]["language"];
+        columns: 1 | 2 | 3; // layout preference, mirrored from metadata for dashboard
+        fontSize: number;
     };
 }
 

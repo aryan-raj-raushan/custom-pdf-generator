@@ -22,6 +22,10 @@ export interface ExamMetadata {
     marksPerQuestion?: number;
     language: "en" | "hi" | "bilingual";
     logoDataUrl?: string; // optional uploaded org logo, base64
+
+    /** Layout preference persisted with the paper: 1 | 2 | 3 columns. Default 2. */
+    columns?: 1 | 2 | 3;
+    fontSize?: number;
 }
 
 export interface QuestionOption {

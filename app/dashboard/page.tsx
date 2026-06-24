@@ -32,7 +32,6 @@ export default async function DashboardPage() {
   }));
 
   const projectCount = await getWorkspaceProjectCount(db, ownerUsername);
-  console.log(session);
 
   return (
     <DashboardClient
