@@ -69,16 +69,31 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(({ pap
           the same column width as the real two-column layout, so heights
           are accurate before we decide pagination. */}
       <div
-        ref={measureRef}
-        aria-hidden
-        className="pointer-events-none fixed left-[-9999px] top-0 grid grid-cols-2 gap-x-5"
-        style={{ width: 718 }}
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          height: 0,
+          width: 0,
+        }}
       >
-        {flatQuestions.map((f) => (
-          <div key={f.blockId} data-block-id={f.blockId}>
-            <QuestionBlock question={f.question} number={f.number} metadata={paper.metadata} />
-          </div>
-        ))}
+        <div
+          ref={measureRef}
+          aria-hidden
+          className="pointer-events-none grid grid-cols-2 gap-x-5"
+          style={{
+            width: 718,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            visibility: "hidden",
+          }}
+        >
+          {flatQuestions.map((f) => (
+            <div key={f.blockId} data-block-id={f.blockId}>
+              <QuestionBlock question={f.question} number={f.number} metadata={paper.metadata} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {pages.map((pageBlockIds, pageIndex) => (
@@ -99,7 +114,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(({ pap
                 <React.Fragment key={id}>
                   {f.isFirstInSection && f.sectionTitleEn && (
                     <div
-                      className="col-span-2 -mb-1 mt-1 border-b pb-0.5 text-[11px] font-bold uppercase tracking-wide"
+                      className="col-span-2 mb-2 mt-2 border-b pb-1 text-[11px] font-bold uppercase tracking-wide"
                       style={{ borderColor: PREVIEW_COLORS.ruleMedium }}
                     >
                       {f.sectionTitleEn}

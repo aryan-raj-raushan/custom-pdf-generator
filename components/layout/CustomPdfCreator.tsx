@@ -1,8 +1,21 @@
-// components/layout/CustomPdfCreator.tsx
 "use client";
 
-import React, { useRef, useState } from "react";
-import { FileText, ListChecks, FileSpreadsheet, ClipboardPaste } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardPaste,
+  FileSpreadsheet,
+  FileText,
+  ListChecks,
+  Loader2,
+  Lock,
+  LogOut,
+  Save,
+} from "lucide-react";
 import { ExamMetadata, ExamPaper, ExamSection, Question } from "@/types/exam";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -31,9 +44,7 @@ export const DEFAULT_INSTRUCTIONS_HI = [
 ];
 
 export type Language = "en" | "hi";
-
 export type QuestionType = "mcq" | "short" | "long";
-
 export type Subject =
   | "general"
   | "mathematics"
@@ -41,6 +52,7 @@ export type Subject =
   | "english"
   | "hindi"
   | "gk";
+
 export function createEmptyMetadata(): ExamMetadata {
   return {
     examTitle: "",
@@ -83,8 +95,7 @@ export function createEmptyQuestion(
         ]
         : undefined,
     marks: 1,
-    answerSpaceLines:
-      type === "short" ? 3 : type === "long" ? 8 : undefined,
+    answerSpaceLines: type === "short" ? 3 : type === "long" ? 8 : undefined,
   };
 }
 
@@ -98,12 +109,12 @@ export function createEmptySection(name = "Section 1"): ExamSection {
 }
 
 export type ImportFlagType =
-  | "missing_answer" // no "Answer: X" line found for an MCQ
-  | "missing_solution" // no "Solution: ..." block found
-  | "image_question" // question text references/implies an image, none attached
-  | "image_option" // an option references/implies an image, none attached
-  | "ambiguous_options" // fewer than 2 options parsed, or option lettering broke
-  | "answer_letter_mismatch" // "Answer: X" letter doesn't match any parsed option
+  | "missing_answer"
+  | "missing_solution"
+  | "image_question"
+  | "image_option"
+  | "ambiguous_options"
+  | "answer_letter_mismatch"
   | "low_confidence";
 
 const LEFT_TABS = [
@@ -111,15 +122,47 @@ const LEFT_TABS = [
   { id: "questions", label: "Questions", icon: <ListChecks size={14} /> },
 ];
 
-export function CustomPdfCreator() {
-  const [paper, setPaper] = useState<ExamPaper>(() => ({
-    metadata: createEmptyMetadata(),
-    sections: [createEmptySection("Section A — General Awareness")],
-  }));
+const DEFAULT_PAPER: ExamPaper = {
+  metadata: createEmptyMetadata(),
+  sections: [createEmptySection("Section A - General Awareness")],
+};
+
+interface CustomPdfCreatorProps {
+  initialPaper?: ExamPaper;
+  paperId?: string;
+  initialName?: string;
+  userPermission?: "edit" | "view";
+}
+
+export function CustomPdfCreator({
+  initialPaper,
+  paperId,
+  initialName,
+  userPermission,
+}: Readonly<CustomPdfCreatorProps>) {
+  console.log(userPermission);
+  const canEdit = userPermission !== "view";
+  const router = useRouter();
+  const [paper, setPaper] = useState<ExamPaper>(initialPaper ?? DEFAULT_PAPER);
   const [activeTab, setActiveTab] = useState("metadata");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<string | null>(null);
   const [jumpToken, setJumpToken] = useState(0);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+
+  const saveMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!saveMenuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (saveMenuRef.current && !saveMenuRef.current.contains(e.target as Node)) {
+        setSaveMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [saveMenuOpen]);
 
   const previewRef = useRef<HTMLDivElement>(null!);
   const answerKeyRef = useRef<HTMLDivElement>(null!);
@@ -127,15 +170,12 @@ export function CustomPdfCreator() {
   const totalQuestions = paper.sections.reduce((sum, s) => sum + s.questions.length, 0);
   const totalFlagged = paper.sections.reduce(
     (sum, s) => sum + s.questions.filter((q) => (q.importFlags?.length ?? 0) > 0).length,
-    0
+    0,
   );
 
   function handleBulkImport(result: ReturnType<typeof parseBulkImportText>) {
     setPaper((p) => {
       const sections = [...p.sections];
-      // Imported questions land in the currently active section (last
-      // section if none obviously "active" in this simple model), so the
-      // user's section/subject organisation stays predictable.
       const targetIndex = sections.length - 1;
       sections[targetIndex] = {
         ...sections[targetIndex],
@@ -151,8 +191,6 @@ export function CustomPdfCreator() {
     setJumpToken((t) => t + 1);
     setActiveTab("questions");
 
-    // Scroll the left-hand editor list to the question card too, once it's
-    // in the DOM (section auto-expand happens in QuestionsPanel's effect).
     let attempts = 0;
     const tryScroll = () => {
       attempts += 1;
@@ -165,9 +203,9 @@ export function CustomPdfCreator() {
     };
     requestAnimationFrame(tryScroll);
 
-    // Clear the highlight after a few seconds so it reads as a momentary
-    // pointer rather than a permanent state.
-    window.setTimeout(() => setHighlightedQuestionId((cur) => (cur === questionId ? null : cur)), 4000);
+    window.setTimeout(() => {
+      setHighlightedQuestionId((cur) => (cur === questionId ? null : cur));
+    }, 4000);
   }
 
   function dismissFlag(questionId: string) {
@@ -175,74 +213,203 @@ export function CustomPdfCreator() {
       ...p,
       sections: p.sections.map((s) => ({
         ...s,
-        questions: s.questions.map((q) => (q.id === questionId ? { ...q, importFlags: undefined } : q)),
+        questions: s.questions.map((q) =>
+          q.id === questionId ? { ...q, importFlags: undefined } : q,
+        ),
       })),
     }));
   }
 
+  async function handleSave(status: "draft" | "saved") {
+    if (!paperId || saveState === "saving") return;
+
+    setSaveState("saving");
+    try {
+      const name =
+        initialName?.trim() ||
+        paper.metadata.examTitle.trim() ||
+        paper.metadata.examCode?.trim() ||
+        "Untitled paper";
+
+      const res = await fetch(`/api/papers/${paperId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, paper, status }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      setSaveState("saved");
+      window.setTimeout(() => {
+        setSaveState((current) => (current === "saved" ? "idle" : current));
+      }, 1800);
+    } catch {
+      setSaveState("error");
+    }
+  }
+
   return (
     <div className="flex h-screen w-full flex-col bg-stone-50">
-      {/* Top bar */}
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-5 py-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-stone-900 text-white">
             <FileText size={16} />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-stone-900">Custom PDF Creator</h1>
+            <h1 className="text-sm font-semibold text-stone-900">
+              {initialName || "Custom PDF Creator"}
+            </h1>
             <div className="flex items-center gap-2">
               <p className="text-[11px] text-stone-400">
-                {totalQuestions} question{totalQuestions === 1 ? "" : "s"} · {paper.sections.length} section
+                {totalQuestions} question{totalQuestions === 1 ? "" : "s"} ·{" "}
+                {paper.sections.length} section
                 {paper.sections.length === 1 ? "" : "s"}
               </p>
-              <ImportSummaryBadge count={totalFlagged} />
+              {canEdit && <ImportSummaryBadge count={totalFlagged} />}
+              {saveState === "error" ? (
+                <span className="text-[11px] font-medium text-red-500">Save failed</span>
+              ) : null}
             </div>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-            <ClipboardPaste size={15} /> Bulk import
-          </Button>
+          {/* Back — always visible */}
+          {paperId ? (
+            <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+              <ArrowLeft size={15} /> Back
+            </Button>
+          ) : null}
+
+          {/* Bulk import — edit only */}
+          {canEdit ? (
+            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+              <ClipboardPaste size={15} /> Bulk import
+            </Button>
+          ) : null}
+
+          {/* Export answer key — always visible */}
           <SaveAsPdfButton
             previewRef={answerKeyRef}
             fileName={`${paper.metadata.examCode || paper.metadata.examTitle || "question-paper"}-answer-key`}
             pageClassName="answer-key-page"
-            label="Save answer key"
+            label="Export answer key"
             variant="secondary"
           />
+
+          {/* Export as PDF — always visible */}
           <SaveAsPdfButton
             previewRef={previewRef}
             fileName={paper.metadata.examCode || paper.metadata.examTitle || "question-paper"}
             pageClassName="pdf-page"
-            label="Save as PDF"
-            variant="primary"
+            label="Export as PDF"
+            variant="secondary"
           />
+
+          {/* Save — edit only */}
+          {paperId && canEdit ? (
+            <div className="relative" ref={saveMenuRef}>
+              <Button
+                variant="primary"
+                onClick={() => setSaveMenuOpen((o) => !o)}
+                disabled={saveState === "saving"}
+              >
+                {saveState === "saving" ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : saveState === "saved" ? (
+                  <CheckCircle2 size={15} />
+                ) : (
+                  <Save size={15} />
+                )}
+                {saveState === "saved" ? "Saved" : "Save"}
+                <ChevronDown size={14} />
+              </Button>
+              {saveMenuOpen ? (
+                <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-stone-200 bg-white p-1.5 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSaveMenuOpen(false);
+                      handleSave("draft");
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
+                  >
+                    <Save size={14} />
+                    Save as draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSaveMenuOpen(false);
+                      handleSave("saved");
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-900 hover:bg-stone-100"
+                  >
+                    <CheckCircle2 size={14} />
+                    Save as project
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Logout — always visible */}
+          {paperId ? (
+            <Button variant="secondary" onClick={() => signOut({ callbackUrl: "/login" })}>
+              <LogOut size={15} /> Logout
+            </Button>
+          ) : null}
         </div>
       </header>
 
-      {/* Body: left editor / right preview */}
       <div className="flex flex-1 overflow-hidden">
+        {/* Left panel */}
         <div className="flex w-[520px] shrink-0 flex-col border-r border-stone-200 bg-white">
           <div className="border-b border-stone-100 p-3">
             <Tabs tabs={LEFT_TABS} activeId={activeTab} onChange={setActiveTab} />
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pt-4">
-            {activeTab === "metadata" ? (
-              <MetadataForm metadata={paper.metadata} onChange={(metadata) => setPaper((p) => ({ ...p, metadata }))} />
-            ) : (
-              <>
-                <ImportIssuesPanel sections={paper.sections} onJumpToQuestion={jumpToQuestion} onDismiss={dismissFlag} />
-                <QuestionsPanel
-                  sections={paper.sections}
+
+          {!canEdit ? (
+            <div className=" h-full inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1.5px]">
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-stone-200 bg-white px-6 py-5 shadow-sm">
+                <Lock size={18} className="text-stone-400" />
+                <p className="text-sm font-medium text-stone-700">View-only access</p>
+                <p className="text-xs text-stone-400 text-center max-w-[200px]">
+                  You can export PDFs but cannot edit this paper.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="relative flex-1 overflow-y-auto px-4 pt-4">
+              {activeTab === "metadata" ? (
+                <MetadataForm
                   metadata={paper.metadata}
-                  onChange={(sections) => setPaper((p) => ({ ...p, sections }))}
-                  highlightedQuestionId={highlightedQuestionId}
+                  onChange={(metadata) => setPaper((p) => ({ ...p, metadata }))}
                 />
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <ImportIssuesPanel
+                    sections={paper.sections}
+                    onJumpToQuestion={jumpToQuestion}
+                    onDismiss={dismissFlag}
+                  />
+                  <QuestionsPanel
+                    sections={paper.sections}
+                    metadata={paper.metadata}
+                    onChange={(sections) => setPaper((p) => ({ ...p, sections }))}
+                    highlightedQuestionId={highlightedQuestionId}
+                  />
+                </>
+              )}
+
+              {/* View-only overlay — covers the entire left panel */}
+
+            </div>
+          )
+          }
         </div>
 
+        {/* Preview panel — always interactive */}
         <div className="flex-1 overflow-hidden">
           <PreviewPanel
             paper={paper}
@@ -254,7 +421,13 @@ export function CustomPdfCreator() {
         </div>
       </div>
 
-      <BulkImportModal open={importModalOpen} onClose={() => setImportModalOpen(false)} onImport={handleBulkImport} />
+      {canEdit && (
+        <BulkImportModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onImport={handleBulkImport}
+        />
+      )}
     </div>
   );
 }

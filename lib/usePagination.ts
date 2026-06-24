@@ -1,19 +1,8 @@
 // lib/usePagination.ts
-// Measures a hidden "measurement" render of all question blocks and buckets
-// them into A4 pages so the live preview + PDF export always paginate
-// correctly regardless of how much content each question has.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { A4_PAGE_HEIGHT_PX } from "./exportPdf";
-
-// Usable content height per page after header/footer/margins reserved by the page chrome.
-// Page chrome (header on pg.1, footer, margins) is subtracted by the caller via reservedFirstPage/reservedRest.
-
-export interface PaginationBlock {
-    id: string;
-    height: number;
-}
 
 export function useAutoPaginate(
     blockIds: string[],
@@ -29,6 +18,7 @@ export function useAutoPaginate(
         reservedOtherPagePx,
         pageHeightPx = A4_PAGE_HEIGHT_PX,
     } = options;
+
     const [pages, setPages] = useState<string[][]>([blockIds]);
     const rafRef = useRef<number | null>(null);
 
@@ -51,19 +41,36 @@ export function useAutoPaginate(
                 .filter((n): n is HTMLElement => n !== null);
 
             if (nodes.length !== blockIds.length) {
-                // Not all blocks mounted yet — try again next tick.
+                // Not all blocks mounted yet — retry next frame
+                rafRef.current = requestAnimationFrame(() => {
+                    // trigger re-measure by bumping state minimally
+                    setPages((prev) => [...prev]);
+                });
                 return;
             }
 
+            // Questions render in a 2-column grid. Measure pairs: only the taller
+            // sibling in each column-pair consumes vertical space.
+            const rowHeights: { ids: string[]; height: number }[] = [];
+            for (let i = 0; i < nodes.length; i += 2) {
+                const leftH = nodes[i].getBoundingClientRect().height;
+                const rightH =
+                    nodes[i + 1]?.getBoundingClientRect().height ?? 0;
+                const rowH = Math.max(leftH, rightH) + 8; // +8 for gap-y
+                const ids = [blockIds[i]];
+                if (blockIds[i + 1]) ids.push(blockIds[i + 1]);
+                rowHeights.push({ ids, height: rowH });
+            }
+
+            // Now paginate by row (not by individual question)
             const result: string[][] = [[]];
             let currentHeight = 0;
             let pageIndex = 0;
             let budget = pageHeightPx - reservedFirstPagePx;
 
-            nodes.forEach((node, i) => {
-                const h = node.getBoundingClientRect().height + 8; // include gap
+            for (const row of rowHeights) {
                 if (
-                    currentHeight + h > budget &&
+                    currentHeight + row.height > budget &&
                     result[pageIndex].length > 0
                 ) {
                     pageIndex += 1;
@@ -71,9 +78,9 @@ export function useAutoPaginate(
                     currentHeight = 0;
                     budget = pageHeightPx - reservedOtherPagePx;
                 }
-                result[pageIndex].push(blockIds[i]);
-                currentHeight += h;
-            });
+                for (const id of row.ids) result[pageIndex].push(id);
+                currentHeight += row.height;
+            }
 
             setPages(result);
         });
