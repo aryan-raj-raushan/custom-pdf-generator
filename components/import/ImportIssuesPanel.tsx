@@ -1,12 +1,12 @@
 // components/import/ImportIssuesPanel.tsx
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, ChevronDown, ChevronUp, ImageIcon, ListChecks, X } from "lucide-react";
-import { ExamSection } from "@/types/exam";
-import { FLAG_LABELS } from "@/lib/bulkImportParser";
-import { ImportFlagType } from "../layout/CustomPdfCreator";
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, ChevronDown, ChevronUp, ImageIcon, ListChecks, X } from 'lucide-react';
+import { ExamSection } from '@/types/exam';
+import { FLAG_LABELS } from '@/lib/bulkImportParser';
+import { ImportFlagType } from '../layout/CustomPdfCreator';
 
 interface FlaggedEntry {
   questionId: string;
@@ -28,7 +28,11 @@ const ICONS: Partial<Record<ImportFlagType, React.ReactNode>> = {
   image_option: <ImageIcon size={12} />,
 };
 
-export function ImportIssuesPanel({ sections, onJumpToQuestion, onDismiss }: Readonly<ImportIssuesPanelProps>) {
+export function ImportIssuesPanel({
+  sections,
+  onJumpToQuestion,
+  onDismiss,
+}: Readonly<ImportIssuesPanelProps>) {
   const [collapsed, setCollapsed] = useState(false);
 
   const entries: FlaggedEntry[] = [];
@@ -43,7 +47,7 @@ export function ImportIssuesPanel({ sections, onJumpToQuestion, onDismiss }: Rea
           sourceIndex: q.importSourceIndex,
           displayNumber: runningNumber,
           flagTypes: q.importFlags.map((f) => f.type),
-          preview: (q.textEn || q.textHi || "(empty question)").slice(0, 60),
+          preview: (q.textEn || q.textHi || '(empty question)').slice(0, 60),
         });
       }
     });
@@ -52,7 +56,7 @@ export function ImportIssuesPanel({ sections, onJumpToQuestion, onDismiss }: Rea
   if (entries.length === 0) return null;
 
   const imageIssues = entries.filter(
-    (e) => e.flagTypes.includes("image_question") || e.flagTypes.includes("image_option")
+    (e) => e.flagTypes.includes('image_question') || e.flagTypes.includes('image_option'),
   );
 
   return (
@@ -69,7 +73,7 @@ export function ImportIssuesPanel({ sections, onJumpToQuestion, onDismiss }: Rea
         <AlertTriangle size={15} className="shrink-0 text-amber-500" />
         <div className="flex-1">
           <p className="text-[13px] font-medium text-amber-800">
-            {entries.length} imported question{entries.length === 1 ? "" : "s"} need attention
+            {entries.length} imported question{entries.length === 1 ? '' : 's'} need attention
           </p>
           {imageIssues.length > 0 && (
             <p className="text-[11px] text-amber-600">
@@ -77,14 +81,18 @@ export function ImportIssuesPanel({ sections, onJumpToQuestion, onDismiss }: Rea
             </p>
           )}
         </div>
-        {collapsed ? <ChevronDown size={14} className="text-amber-500" /> : <ChevronUp size={14} className="text-amber-500" />}
+        {collapsed ? (
+          <ChevronDown size={14} className="text-amber-500" />
+        ) : (
+          <ChevronUp size={14} className="text-amber-500" />
+        )}
       </button>
 
       <AnimatePresence initial={false}>
         {!collapsed && (
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: "auto" }}
+            animate={{ height: 'auto' }}
             exit={{ height: 0 }}
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
@@ -144,7 +152,7 @@ export function ImportSummaryBadge({ count }: Readonly<{ count: number }>) {
   return (
     <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
       <ListChecks size={11} />
-      {count} need{count === 1 ? "s" : ""} review
+      {count} need{count === 1 ? 's' : ''} review
     </span>
   );
 }

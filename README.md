@@ -172,12 +172,12 @@ The application allows customization of:
 
 ## Scripts
 
-| Command | Description |
-|----------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Create production build |
-| `npm run start` | Run production server |
-| `npm run lint` | Run ESLint |
+| Command         | Description              |
+| --------------- | ------------------------ |
+| `npm run dev`   | Start development server |
+| `npm run build` | Create production build  |
+| `npm run start` | Run production server    |
+| `npm run lint`  | Run ESLint               |
 
 ---
 

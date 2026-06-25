@@ -1,18 +1,17 @@
-"use client";
+'use client';
 
-import React, { useMemo, useRef } from "react";
-import { PREVIEW_COLORS } from "@/lib/previewTheme";
-import { MathText } from "@/lib/renderMath";
-import { ExamPaper } from "@/types/exam";
-import { ColumnCount } from "./A4Preview";
-import { useAutoPaginate } from "@/lib/usePagination";
+import React, { useMemo, useRef } from 'react';
+import { PREVIEW_COLORS } from '@/lib/previewTheme';
+import { MathText } from '@/lib/renderMath';
+import { ExamPaper } from '@/types/exam';
+import { ColumnCount } from './A4Preview';
+import { useAutoPaginate } from '@/lib/usePagination';
 
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
   columns?: ColumnCount;
-  fontSize?: number
+  fontSize?: number;
 }
-
 
 interface FlatAnswerRow {
   id: string;
@@ -29,7 +28,6 @@ interface AnswerGridProps {
   rows: FlatAnswerRow[];
   sizes: ReturnType<typeof getAnswerSizes>;
 }
-
 
 const FONT_BASE = 11;
 
@@ -53,26 +51,20 @@ const A4_WIDTH_PX = 794;
 
 // Inline grid styles — avoids Tailwind purging dynamic col-span/grid-cols classes
 const GRID_STYLE: Record<ColumnCount, React.CSSProperties> = {
-  1: { display: "grid", gridTemplateColumns: "1fr" },
-  2: { display: "grid", gridTemplateColumns: "1fr 1fr" },
-  3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr" },
+  1: { display: 'grid', gridTemplateColumns: '1fr' },
+  2: { display: 'grid', gridTemplateColumns: '1fr 1fr' },
+  3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' },
 };
 
-const COL_SPAN_ALL: React.CSSProperties = { gridColumn: "1 / -1" };
+const COL_SPAN_ALL: React.CSSProperties = { gridColumn: '1 / -1' };
 
 // ─── Compact Answer Grid ──────────────────────────────────────────────────────
-function AnswerGrid({
-  rows,
-  sizes,
-}: Readonly<AnswerGridProps>) {
+function AnswerGrid({ rows, sizes }: Readonly<AnswerGridProps>) {
   const mcqRows = rows.filter((r) => r.letter);
   if (mcqRows.length === 0) return null;
 
   return (
-    <div
-      className="mb-5 border p-3"
-      style={{ borderColor: PREVIEW_COLORS.ruleBold }}
-    >
+    <div className="mb-5 border p-3" style={{ borderColor: PREVIEW_COLORS.ruleBold }}>
       <p
         style={{
           color: PREVIEW_COLORS.quaternaryText,
@@ -85,9 +77,9 @@ function AnswerGrid({
       {/* Always 10-column dense grid — just number + letter */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(10, 1fr)",
-          gap: "4px 4px",
+          display: 'grid',
+          gridTemplateColumns: 'repeat(10, 1fr)',
+          gap: '4px 4px',
         }}
       >
         {mcqRows.map((r) => (
@@ -132,12 +124,7 @@ interface SolutionBlockProps {
 
 function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<SolutionBlockProps>) {
   const hasSolution = row.solutionEn || row.solutionHi;
-  const actualFontSize =
-    columns === 1
-      ? fontSize
-      : columns === 3
-        ? fontSize + 1
-        : fontSize + 2;
+  const actualFontSize = columns === 1 ? fontSize : columns === 3 ? fontSize + 1 : fontSize + 2;
 
   return (
     <div
@@ -159,14 +146,14 @@ function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<Solu
             <p>
               <span className="font-semibold">Ans: </span>
               <span className="font-bold" style={{ color: PREVIEW_COLORS.successText }}>
-                ({row.letter}){row.optionTextEn ? ` ${row.optionTextEn}` : ""}
+                ({row.letter}){row.optionTextEn ? ` ${row.optionTextEn}` : ''}
               </span>
             </p>
           )}
           {hasSolution ? (
             <p className="mt-0.5" style={{ color: PREVIEW_COLORS.tertiaryText }}>
               <span className="font-semibold" style={{ color: PREVIEW_COLORS.quaternaryText }}>
-                Solution:{" "}
+                Solution:{' '}
               </span>
               {showEn && row.solutionEn && <MathText text={row.solutionEn} />}
               {showHi && row.solutionHi && (
@@ -174,13 +161,17 @@ function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<Solu
                   style={{
                     fontSize: `${actualFontSize}px`,
                   }}
-                  className="font-devanagari mt-0.5 block text-[9.5px]">
+                  className="font-devanagari mt-0.5 block text-[9.5px]"
+                >
                   <MathText text={row.solutionHi} />
                 </span>
               )}
             </p>
           ) : (
-            <p className="mt-0.5 italic" style={{ fontSize: "9px", color: PREVIEW_COLORS.mutedText }}>
+            <p
+              className="mt-0.5 italic"
+              style={{ fontSize: '9px', color: PREVIEW_COLORS.mutedText }}
+            >
               No solution provided
             </p>
           )}
@@ -211,8 +202,8 @@ const SOLUTIONS_RESERVED_OTHER: Record<ColumnCount, number> = {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPreviewProps>(
   ({ paper, columns = 2, fontSize = 11 }, ref) => {
-    const showHi = paper.metadata.language !== "en";
-    const showEn = paper.metadata.language !== "hi";
+    const showHi = paper.metadata.language !== 'en';
+    const showEn = paper.metadata.language !== 'hi';
 
     const sizes = getAnswerSizes(fontSize);
 
@@ -268,11 +259,11 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
         <div
           aria-hidden
           style={{
-            position: "fixed",
-            top: "-9999px",
-            left: "-9999px",
-            visibility: "hidden",
-            pointerEvents: "none",
+            position: 'fixed',
+            top: '-9999px',
+            left: '-9999px',
+            visibility: 'hidden',
+            pointerEvents: 'none',
             zIndex: -1,
           }}
         >
@@ -280,13 +271,19 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             ref={measureRef}
             style={{
               ...GRID_STYLE[columns],
-              gap: "0 20px",
+              gap: '0 20px',
               width: 718,
             }}
           >
             {rows.map((row) => (
               <div key={row.id} data-block-id={row.id}>
-                <SolutionBlock row={row} showEn={showEn} showHi={showHi} columns={columns} fontSize={fontSize} />
+                <SolutionBlock
+                  row={row}
+                  showEn={showEn}
+                  showHi={showHi}
+                  columns={columns}
+                  fontSize={fontSize}
+                />
               </div>
             ))}
           </div>
@@ -300,7 +297,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             style={{
               width: A4_WIDTH_PX,
               minHeight: 1123,
-              padding: "34px 38px 44px",
+              padding: '34px 38px 44px',
               backgroundColor: PREVIEW_COLORS.pageBackground,
               color: PREVIEW_COLORS.pageText,
               boxShadow: PREVIEW_COLORS.pageShadow,
@@ -314,9 +311,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   className="mb-4 border-b-2 pb-2 text-center"
                   style={{ borderColor: PREVIEW_COLORS.pageText }}
                 >
-                  <h1 className="text-base font-bold uppercase">
-                    Answer Key &amp; Solutions
-                  </h1>
+                  <h1 className="text-base font-bold uppercase">Answer Key &amp; Solutions</h1>
                   {showEn && paper.metadata.examTitle && (
                     <p className="text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
                       {paper.metadata.examTitle}
@@ -337,10 +332,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   )}
                 </div>
 
-                <AnswerGrid
-                  rows={rows}
-                  sizes={sizes}
-                />
+                <AnswerGrid rows={rows} sizes={sizes} />
 
                 <div
                   className="mb-3 border-b pb-1 text-[10px] font-bold uppercase tracking-widest"
@@ -366,7 +358,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             )}
 
             {/* ── Solutions grid ── */}
-            <div style={{ ...GRID_STYLE[columns], gap: "0 20px" }}>
+            <div style={{ ...GRID_STYLE[columns], gap: '0 20px' }}>
               {pageBlockIds.map((id) => {
                 const row = byId.get(id);
                 if (!row) return null;
@@ -378,13 +370,13 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                           ...COL_SPAN_ALL,
                           borderBottom: `1px solid ${PREVIEW_COLORS.ruleSoft}`,
                           color: PREVIEW_COLORS.quaternaryText,
-                          marginTop: "6px",
-                          marginBottom: "6px",
-                          paddingBottom: "2px",
-                          fontSize: "10px",
-                          fontWeight: "bold",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
+                          marginTop: '6px',
+                          marginBottom: '6px',
+                          paddingBottom: '2px',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
                         }}
                       >
                         {row.sectionTitleEn}
@@ -419,6 +411,6 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
   },
 );
 
-AnswerKeyPreview.displayName = "AnswerKeyPreview";
+AnswerKeyPreview.displayName = 'AnswerKeyPreview';
 
 export default AnswerKeyPreview;

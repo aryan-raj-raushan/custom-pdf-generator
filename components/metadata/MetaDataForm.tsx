@@ -1,15 +1,18 @@
 // components/metadata/MetadataForm.tsx
-"use client";
+'use client';
 
-import React, { useRef } from "react";
-import { motion } from "framer-motion";
-import { Plus, Trash2, Upload, X } from "lucide-react";
-import { ExamMetadata } from "@/types/exam";
+import React, { useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Trash2, Upload, X } from 'lucide-react';
+import { ExamMetadata } from '@/types/exam';
 import {
-  Field, Input, Select, TextArea,
+  Field,
+  Input,
+  Select,
+  TextArea,
   // inputClass
-} from "@/components/ui/Field";
-import { Button } from "@/components/ui/Button";
+} from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 
 interface MetadataFormProps {
   metadata: ExamMetadata;
@@ -23,26 +26,26 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     onChange({ ...metadata, [key]: value });
   }
 
-  function updateInstruction(index: number, value: string, lang: "en" | "hi") {
-    const key = lang === "en" ? "generalInstructions" : "generalInstructionsHi";
+  function updateInstruction(index: number, value: string, lang: 'en' | 'hi') {
+    const key = lang === 'en' ? 'generalInstructions' : 'generalInstructionsHi';
     const list = [...(metadata[key] ?? [])];
     list[index] = value;
     update(key, list);
   }
 
   function addInstruction() {
-    update("generalInstructions", [...metadata.generalInstructions, ""]);
-    update("generalInstructionsHi", [...(metadata.generalInstructionsHi ?? []), ""]);
+    update('generalInstructions', [...metadata.generalInstructions, '']);
+    update('generalInstructionsHi', [...(metadata.generalInstructionsHi ?? []), '']);
   }
 
   function removeInstruction(index: number) {
     update(
-      "generalInstructions",
-      metadata.generalInstructions.filter((_, i) => i !== index)
+      'generalInstructions',
+      metadata.generalInstructions.filter((_, i) => i !== index),
     );
     update(
-      "generalInstructionsHi",
-      (metadata.generalInstructionsHi ?? []).filter((_, i) => i !== index)
+      'generalInstructionsHi',
+      (metadata.generalInstructionsHi ?? []).filter((_, i) => i !== index),
     );
   }
 
@@ -50,7 +53,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => update("logoDataUrl", reader.result as string);
+    reader.onload = () => update('logoDataUrl', reader.result as string);
     reader.readAsDataURL(file);
   }
 
@@ -78,7 +81,13 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               <Upload size={18} />
             )}
           </button>
-          <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
           <div className="flex flex-col">
             <span className="text-[13px] font-medium text-stone-700">Organisation emblem</span>
             <span className="text-xs text-stone-400">PNG/SVG, shown top-left of the header</span>
@@ -86,7 +95,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
           {metadata.logoDataUrl && (
             <button
               type="button"
-              onClick={() => update("logoDataUrl", undefined)}
+              onClick={() => update('logoDataUrl', undefined)}
               className="ml-auto text-stone-400 hover:text-red-500"
             >
               <X size={16} />
@@ -97,15 +106,15 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         <Field label="Organisation / Board name">
           <Input
             value={metadata.organisation}
-            onChange={(e) => update("organisation", e.target.value)}
+            onChange={(e) => update('organisation', e.target.value)}
             placeholder="Staff Selection Commission"
           />
         </Field>
 
         <Field label="Organisation name (Hindi)" hint="शीर्षक हिंदी में">
           <Input
-            value={metadata.organisationHi ?? ""}
-            onChange={(e) => update("organisationHi", e.target.value)}
+            value={metadata.organisationHi ?? ''}
+            onChange={(e) => update('organisationHi', e.target.value)}
             placeholder="कर्मचारी चयन आयोग"
           />
         </Field>
@@ -113,15 +122,15 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         <Field label="Exam title">
           <Input
             value={metadata.examTitle}
-            onChange={(e) => update("examTitle", e.target.value)}
+            onChange={(e) => update('examTitle', e.target.value)}
             placeholder="Combined Graduate Level Examination"
           />
         </Field>
 
         <Field label="Exam title (Hindi)">
           <Input
-            value={metadata.examTitleHi ?? ""}
-            onChange={(e) => update("examTitleHi", e.target.value)}
+            value={metadata.examTitleHi ?? ''}
+            onChange={(e) => update('examTitleHi', e.target.value)}
             placeholder="संयुक्त स्नातक स्तरीय परीक्षा"
           />
         </Field>
@@ -129,22 +138,22 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Exam code">
             <Input
-              value={metadata.examCode ?? ""}
-              onChange={(e) => update("examCode", e.target.value)}
+              value={metadata.examCode ?? ''}
+              onChange={(e) => update('examCode', e.target.value)}
               placeholder="SSC-CGL-2026"
             />
           </Field>
           <Field label="Set / Series">
             <div className="flex gap-2">
               <Input
-                value={metadata.setCode ?? ""}
-                onChange={(e) => update("setCode", e.target.value)}
+                value={metadata.setCode ?? ''}
+                onChange={(e) => update('setCode', e.target.value)}
                 placeholder="A"
                 className="w-16"
               />
               <Input
-                value={metadata.bookletSeries ?? ""}
-                onChange={(e) => update("bookletSeries", e.target.value)}
+                value={metadata.bookletSeries ?? ''}
+                onChange={(e) => update('bookletSeries', e.target.value)}
                 placeholder="Booklet series"
               />
             </div>
@@ -158,12 +167,16 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Date">
-            <Input type="date" value={metadata.date} onChange={(e) => update("date", e.target.value)} />
+            <Input
+              type="date"
+              value={metadata.date}
+              onChange={(e) => update('date', e.target.value)}
+            />
           </Field>
           <Field label="Duration">
             <Input
               value={metadata.duration}
-              onChange={(e) => update("duration", e.target.value)}
+              onChange={(e) => update('duration', e.target.value)}
               placeholder="2 Hours"
             />
           </Field>
@@ -174,7 +187,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
             <Input
               type="number"
               value={metadata.maxMarks}
-              onChange={(e) => update("maxMarks", Number(e.target.value))}
+              onChange={(e) => update('maxMarks', Number(e.target.value))}
             />
           </Field>
           <Field label="Marks per question (default)">
@@ -182,7 +195,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               type="number"
               step="0.5"
               value={metadata.marksPerQuestion ?? 1}
-              onChange={(e) => update("marksPerQuestion", Number(e.target.value))}
+              onChange={(e) => update('marksPerQuestion', Number(e.target.value))}
             />
           </Field>
         </div>
@@ -194,23 +207,24 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               role="switch"
               aria-checked={metadata.negativeMarking?.enabled ?? false}
               onClick={() =>
-                update("negativeMarking", {
+                update('negativeMarking', {
                   enabled: !(metadata.negativeMarking?.enabled ?? false),
                   value: metadata.negativeMarking?.value ?? 0.25,
                 })
               }
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${metadata.negativeMarking?.enabled ? "bg-stone-900" : "bg-stone-200"
-                }`}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                metadata.negativeMarking?.enabled ? 'bg-stone-900' : 'bg-stone-200'
+              }`}
             >
               <motion.span
                 layout
                 className="absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm"
                 style={{ left: metadata.negativeMarking?.enabled ? 22 : 4 }}
-                transition={{ type: "spring", duration: 0.25, bounce: 0.2 }}
+                transition={{ type: 'spring', duration: 0.25, bounce: 0.2 }}
               />
             </button>
             <span className="text-sm text-stone-600">
-              {metadata.negativeMarking?.enabled ? "Enabled —" : "Disabled"}
+              {metadata.negativeMarking?.enabled ? 'Enabled —' : 'Disabled'}
             </span>
             {metadata.negativeMarking?.enabled && (
               <Input
@@ -218,7 +232,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 step="0.25"
                 value={metadata.negativeMarking.value}
                 onChange={(e) =>
-                  update("negativeMarking", {
+                  update('negativeMarking', {
                     enabled: true,
                     value: Number(e.target.value),
                   })
@@ -226,12 +240,17 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 className="w-20"
               />
             )}
-            {metadata.negativeMarking?.enabled && <span className="text-sm text-stone-500">marks per wrong answer</span>}
+            {metadata.negativeMarking?.enabled && (
+              <span className="text-sm text-stone-500">marks per wrong answer</span>
+            )}
           </div>
         </Field>
 
         <Field label="Paper language">
-          <Select value={metadata.language} onChange={(e) => update("language", e.target.value as ExamMetadata["language"])}>
+          <Select
+            value={metadata.language}
+            onChange={(e) => update('language', e.target.value as ExamMetadata['language'])}
+          >
             <option value="bilingual">Bilingual (English + Hindi)</option>
             <option value="en">English only</option>
             <option value="hi">Hindi only (हिंदी)</option>
@@ -245,12 +264,12 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         <Toggle
           label="Show Roll Number box"
           checked={metadata.rollNoLabel ?? true}
-          onChange={(v) => update("rollNoLabel", v)}
+          onChange={(v) => update('rollNoLabel', v)}
         />
         <Toggle
           label="Show Candidate Name line"
           checked={metadata.candidateNameLabel ?? true}
-          onChange={(v) => update("candidateNameLabel", v)}
+          onChange={(v) => update('candidateNameLabel', v)}
         />
       </section>
 
@@ -265,12 +284,15 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
         <div className="flex flex-col gap-3">
           {metadata.generalInstructions.map((instr, i) => (
-            <div key={i} className="flex flex-col gap-1.5 rounded-md border border-stone-100 bg-stone-50/60 p-2.5">
+            <div
+              key={i}
+              className="flex flex-col gap-1.5 rounded-md border border-stone-100 bg-stone-50/60 p-2.5"
+            >
               <div className="flex items-start gap-2">
                 <span className="mt-2 w-4 shrink-0 text-xs text-stone-400">{i + 1}.</span>
                 <TextArea
                   value={instr}
-                  onChange={(e) => updateInstruction(i, e.target.value, "en")}
+                  onChange={(e) => updateInstruction(i, e.target.value, 'en')}
                   placeholder="Instruction in English"
                   rows={2}
                   className="flex-1 text-[13px]"
@@ -283,14 +305,14 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   <Trash2 size={14} />
                 </button>
               </div>
-              {metadata.language !== "en" && (
+              {metadata.language !== 'en' && (
                 <TextArea
-                  value={metadata.generalInstructionsHi?.[i] ?? ""}
-                  onChange={(e) => updateInstruction(i, e.target.value, "hi")}
+                  value={metadata.generalInstructionsHi?.[i] ?? ''}
+                  onChange={(e) => updateInstruction(i, e.target.value, 'hi')}
                   placeholder="हिंदी में निर्देश"
                   rows={2}
                   className="ml-6 flex-1 text-[13px]"
-                  style={{ fontFamily: "var(--font-devanagari, inherit)" }}
+                  style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
                 />
               )}
             </div>
@@ -302,10 +324,16 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 }
 
 function SectionLabel({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <h3 className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{children}</h3>;
+  return (
+    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{children}</h3>
+  );
 }
 
-function Toggle({ label, checked, onChange }: Readonly<{ label: string; checked: boolean; onChange: (v: boolean) => void }>) {
+function Toggle({
+  label,
+  checked,
+  onChange,
+}: Readonly<{ label: string; checked: boolean; onChange: (v: boolean) => void }>) {
   return (
     <button
       type="button"
@@ -316,13 +344,13 @@ function Toggle({ label, checked, onChange }: Readonly<{ label: string; checked:
       <span
         role="switch"
         aria-checked={checked}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-stone-900" : "bg-stone-200"}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-stone-900' : 'bg-stone-200'}`}
       >
         <motion.span
           layout
           className="absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm"
           style={{ left: checked ? 22 : 4 }}
-          transition={{ type: "spring", duration: 0.25, bounce: 0.2 }}
+          transition={{ type: 'spring', duration: 0.25, bounce: 0.2 }}
         />
       </span>
     </button>

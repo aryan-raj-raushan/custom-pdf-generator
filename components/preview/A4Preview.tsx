@@ -1,16 +1,15 @@
 // components/preview/A4Preview.tsx
-"use client";
+'use client';
 
-import React, { useMemo, useRef } from "react";
-import { ExamPaper, Question } from "@/types/exam";
-import { PREVIEW_COLORS } from "@/lib/previewTheme";
-import { PaperHeader, InstructionsBlock } from "./PaperHeader";
-import { QuestionBlock } from "./QuestionBlock";
-import { useAutoPaginate } from "@/lib/usePagination";
-import { FONT_SIZE_DEFAULT } from "./PreviewPanel";
+import React, { useMemo, useRef } from 'react';
+import { ExamPaper, Question } from '@/types/exam';
+import { PREVIEW_COLORS } from '@/lib/previewTheme';
+import { PaperHeader, InstructionsBlock } from './PaperHeader';
+import { QuestionBlock } from './QuestionBlock';
+import { useAutoPaginate } from '@/lib/usePagination';
+import { FONT_SIZE_DEFAULT } from './PreviewPanel';
 
 export type ColumnCount = 1 | 2 | 3;
-
 
 interface FlatQuestion {
   blockId: string;
@@ -43,9 +42,9 @@ function getReservedOtherPage(columns: ColumnCount): number {
 }
 
 const GRID_CLASS: Record<ColumnCount, string> = {
-  1: "grid-cols-1",
-  2: "grid-cols-2",
-  3: "grid-cols-3",
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
 };
 
 const MEASURE_WIDTHS: Record<ColumnCount, number> = {
@@ -99,8 +98,8 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
         {/* Hidden measurement pass */}
         <div
           style={{
-            position: "relative",
-            overflow: "hidden",
+            position: 'relative',
+            overflow: 'hidden',
             height: 0,
             width: 0,
           }}
@@ -111,10 +110,10 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
             className={`pointer-events-none grid ${gridClass} gap-x-5`}
             style={{
               width: MEASURE_WIDTHS[columns],
-              position: "absolute",
+              position: 'absolute',
               top: 0,
               left: 0,
-              visibility: "hidden",
+              visibility: 'hidden',
             }}
           >
             {flatQuestions.map((f) => (
@@ -176,12 +175,11 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
                         >
                           {group.titleEn}
 
-                          {paper.metadata.language !== "en" &&
-                            group.titleHi && (
-                              <span className="font-devanagari ml-2 font-normal normal-case">
-                                {group.titleHi}
-                              </span>
-                            )}
+                          {paper.metadata.language !== 'en' && group.titleHi && (
+                            <span className="font-devanagari ml-2 font-normal normal-case">
+                              {group.titleHi}
+                            </span>
+                          )}
                         </div>
                       )}
 
@@ -192,9 +190,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
                             question={f.question}
                             number={f.number}
                             metadata={paper.metadata}
-                            isHighlighted={
-                              f.blockId === highlightedQuestionId
-                            }
+                            isHighlighted={f.blockId === highlightedQuestionId}
                             showFlagIndicator
                             columns={columns}
                             fontSize={fontSize}
@@ -213,7 +209,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
   },
 );
 
-A4Preview.displayName = "A4Preview";
+A4Preview.displayName = 'A4Preview';
 
 function Page({
   children,
@@ -230,7 +226,7 @@ function Page({
       style={{
         width: 794,
         minHeight: 1123,
-        padding: "34px 38px 44px",
+        padding: '34px 38px 44px',
         backgroundColor: PREVIEW_COLORS.pageBackground,
         color: PREVIEW_COLORS.pageText,
         boxShadow: PREVIEW_COLORS.pageShadow,
@@ -251,9 +247,7 @@ function Page({
   );
 }
 
-function RunningHeader({
-  metadata,
-}: Readonly<{ metadata: ExamPaper["metadata"] }>) {
+function RunningHeader({ metadata }: Readonly<{ metadata: ExamPaper['metadata'] }>) {
   return (
     <div
       className="flex items-center justify-between border-b pb-1 text-[10px] font-medium"

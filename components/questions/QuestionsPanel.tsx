@@ -1,15 +1,20 @@
 // components/questions/QuestionsPanel.tsx
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, FilePlus, FolderPlus, Trash2 } from "lucide-react";
-import { ExamSection, ExamMetadata } from "@/types/exam";
-import { QuestionEditor } from "./QuestionEditor";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
-import { createEmptyQuestion, createEmptySection, QuestionType, Subject } from "../layout/CustomPdfCreator";
+import React, { useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, FilePlus, FolderPlus, Trash2 } from 'lucide-react';
+import { ExamSection, ExamMetadata } from '@/types/exam';
+import { QuestionEditor } from './QuestionEditor';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
+import {
+  createEmptyQuestion,
+  createEmptySection,
+  QuestionType,
+  Subject,
+} from '../layout/CustomPdfCreator';
 
 interface QuestionsPanelProps {
   sections: ExamSection[];
@@ -19,21 +24,28 @@ interface QuestionsPanelProps {
 }
 
 const QUICK_ADD: { type: QuestionType; subject: Subject; label: string }[] = [
-  { type: "mcq", subject: "general", label: "MCQ" },
-  { type: "mcq", subject: "mathematics", label: "Maths MCQ" },
-  { type: "short", subject: "general", label: "Short answer" },
-  { type: "long", subject: "general", label: "Long answer" },
+  { type: 'mcq', subject: 'general', label: 'MCQ' },
+  { type: 'mcq', subject: 'mathematics', label: 'Maths MCQ' },
+  { type: 'short', subject: 'general', label: 'Short answer' },
+  { type: 'long', subject: 'general', label: 'Long answer' },
 ];
 
-export function QuestionsPanel({ sections, metadata, onChange, highlightedQuestionId }: Readonly<QuestionsPanelProps>) {
+export function QuestionsPanel({
+  sections,
+  metadata,
+  onChange,
+  highlightedQuestionId,
+}: Readonly<QuestionsPanelProps>) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const showHindi = metadata.language !== "en";
+  const showHindi = metadata.language !== 'en';
 
   // If the highlighted question lives in a collapsed section, force that
   // section open so the scroll-into-view target actually exists in the DOM.
   React.useEffect(() => {
     if (!highlightedQuestionId) return;
-    const owningSection = sections.find((s) => s.questions.some((q) => q.id === highlightedQuestionId));
+    const owningSection = sections.find((s) =>
+      s.questions.some((q) => q.id === highlightedQuestionId),
+    );
     if (owningSection && collapsed[owningSection.id]) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed((c) => ({ ...c, [owningSection.id]: false }));
@@ -56,10 +68,16 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
   function addQuestion(sectionId: string, type: QuestionType, subject: Subject) {
     const section = sections.find((s) => s.id === sectionId);
     if (!section) return;
-    updateSection(sectionId, { questions: [...section.questions, createEmptyQuestion(type, subject)] });
+    updateSection(sectionId, {
+      questions: [...section.questions, createEmptyQuestion(type, subject)],
+    });
   }
 
-  function updateQuestion(sectionId: string, questionId: string, patch: ExamSection["questions"][number]) {
+  function updateQuestion(
+    sectionId: string,
+    questionId: string,
+    patch: ExamSection['questions'][number],
+  ) {
     const section = sections.find((s) => s.id === sectionId);
     if (!section) return;
     updateSection(sectionId, {
@@ -100,7 +118,7 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
           if (s.id === sourceSectionId) return { ...s, questions: srcQuestions };
           if (s.id === destSectionId) return { ...s, questions: destQuestions };
           return s;
-        })
+        }),
       );
     }
   }
@@ -141,11 +159,11 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
 
               {showHindi && (
                 <Input
-                  value={section.titleHi ?? ""}
+                  value={section.titleHi ?? ''}
                   onChange={(e) => updateSection(section.id, { titleHi: e.target.value })}
                   placeholder="अनुभाग शीर्षक (हिंदी)"
                   className="-mt-2 ml-6 !w-auto !border-none !bg-transparent !px-1 !py-0.5 !text-xs !text-stone-500 !shadow-none focus:!ring-0"
-                  style={{ fontFamily: "var(--font-devanagari, inherit)" }}
+                  style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
                 />
               )}
 
@@ -153,14 +171,18 @@ export function QuestionsPanel({ sections, metadata, onChange, highlightedQuesti
                 {!isCollapsed && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
+                    animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
                     <Droppable droppableId={section.id}>
                       {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-2.5">
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className="flex flex-col gap-2.5"
+                        >
                           <AnimatePresence initial={false}>
                             {section.questions.map((q, index) => (
                               <Draggable key={q.id} draggableId={q.id} index={index}>

@@ -1,13 +1,13 @@
 // components/preview/PaperHeader.tsx
-"use client";
+'use client';
 
-import React from "react";
-import { PREVIEW_COLORS } from "@/lib/previewTheme";
-import { ExamMetadata } from "@/types/exam";
+import React from 'react';
+import { PREVIEW_COLORS } from '@/lib/previewTheme';
+import { ExamMetadata } from '@/types/exam';
 
 export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) {
-  const showHi = metadata.language !== "en";
-  const showEn = metadata.language !== "hi";
+  const showHi = metadata.language !== 'en';
+  const showEn = metadata.language !== 'hi';
 
   return (
     <div className="select-none border-b-2 pb-2" style={{ borderColor: PREVIEW_COLORS.pageText }}>
@@ -56,9 +56,15 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
         className="mt-2 flex items-center justify-between border-y py-1 text-[10.5px] font-medium"
         style={{ borderColor: PREVIEW_COLORS.ruleBold }}
       >
-        <span>Time: <strong>{metadata.duration}</strong></span>
-        <span>Date: <strong>{metadata.date ? formatDate(metadata.date) : "—"}</strong></span>
-        <span>Max. Marks: <strong>{metadata.maxMarks}</strong></span>
+        <span>
+          Time: <strong>{metadata.duration}</strong>
+        </span>
+        <span>
+          Date: <strong>{metadata.date ? formatDate(metadata.date) : '—'}</strong>
+        </span>
+        <span>
+          Max. Marks: <strong>{metadata.maxMarks}</strong>
+        </span>
       </div>
 
       {(metadata.rollNoLabel || metadata.candidateNameLabel) && (
@@ -94,7 +100,8 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
           Note: {metadata.negativeMarking.value} marks will be deducted for each wrong answer.
           {showHi && (
             <span className="font-devanagari">
-              {" "}प्रत्येक गलत उत्तर के लिए {metadata.negativeMarking.value} अंक काटे जाएंगे।
+              {' '}
+              प्रत्येक गलत उत्तर के लिए {metadata.negativeMarking.value} अंक काटे जाएंगे।
             </span>
           )}
         </p>
@@ -104,8 +111,8 @@ export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) 
 }
 
 export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadata }>) {
-  const showHi = metadata.language !== "en";
-  const showEn = metadata.language !== "hi";
+  const showHi = metadata.language !== 'en';
+  const showEn = metadata.language !== 'hi';
 
   if (metadata.generalInstructions.length === 0) return null;
 
@@ -115,7 +122,7 @@ export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadat
       style={{ borderColor: PREVIEW_COLORS.ruleBold }}
     >
       <p className="mb-1 text-center text-[10.5px] font-bold uppercase">
-        General Instructions{showHi ? " / सामान्य निर्देश" : ""}
+        General Instructions{showHi ? ' / सामान्य निर्देश' : ''}
       </p>
       <ol className="list-decimal space-y-0.5 pl-4">
         {metadata.generalInstructions.map((ins, i) => (
@@ -139,10 +146,10 @@ export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadat
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     });
   } catch {
     return iso;

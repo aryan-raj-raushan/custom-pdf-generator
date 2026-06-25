@@ -1,7 +1,7 @@
 // components/preview/PreviewPanel.tsx
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   ZoomIn,
   ZoomOut,
@@ -12,10 +12,10 @@ import {
   Minus,
   Plus,
   Type,
-} from "lucide-react";
-import { ExamPaper } from "@/types/exam";
-import { A4Preview, ColumnCount } from "./A4Preview";
-import { AnswerKeyPreview } from "./AnswerKeyPreview";
+} from 'lucide-react';
+import { ExamPaper } from '@/types/exam';
+import { A4Preview, ColumnCount } from './A4Preview';
+import { AnswerKeyPreview } from './AnswerKeyPreview';
 
 interface PreviewPanelProps {
   paper: ExamPaper;
@@ -32,9 +32,9 @@ interface PreviewPanelProps {
 const ZOOM_STEPS = [0.5, 0.6, 0.75, 0.85, 1];
 
 const COLUMN_OPTIONS: { value: ColumnCount; label: string; title: string }[] = [
-  { value: 1, label: "1", title: "Single column" },
-  { value: 2, label: "2", title: "Two columns" },
-  { value: 3, label: "3", title: "Three columns" },
+  { value: 1, label: '1', title: 'Single column' },
+  { value: 2, label: '2', title: 'Two columns' },
+  { value: 3, label: '3', title: 'Three columns' },
 ];
 
 export const FONT_SIZE_MIN = 10;
@@ -51,15 +51,11 @@ export function PreviewPanel({
   onFontSizeChange,
 }: Readonly<PreviewPanelProps>) {
   const [zoomIndex, setZoomIndex] = useState(2); // default 0.75
-  const [mode, setMode] = useState<"paper" | "answerKey">("paper");
+  const [mode, setMode] = useState<'paper' | 'answerKey'>('paper');
 
-  const [columns, setColumns] = useState<ColumnCount>(
-    (paper.metadata.columns ?? 2) as ColumnCount,
-  );
+  const [columns, setColumns] = useState<ColumnCount>((paper.metadata.columns ?? 2) as ColumnCount);
 
-  const [fontSize, setFontSize] = useState<number>(
-    paper.metadata.fontSize ?? FONT_SIZE_DEFAULT,
-  );
+  const [fontSize, setFontSize] = useState<number>(paper.metadata.fontSize ?? FONT_SIZE_DEFAULT);
 
   // Sync if a different paper is loaded
   useEffect(() => {
@@ -93,7 +89,7 @@ export function PreviewPanel({
   useEffect(() => {
     if (!highlightedQuestionId || jumpToken === undefined) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMode("paper");
+    setMode('paper');
 
     let attempts = 0;
     const tryScroll = () => {
@@ -102,7 +98,7 @@ export function PreviewPanel({
         `[data-question-id="${highlightedQuestionId}"]`,
       );
       if (node) {
-        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       if (attempts < 20) requestAnimationFrame(tryScroll);
@@ -119,21 +115,19 @@ export function PreviewPanel({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setMode("paper")}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === "paper"
-                ? "bg-stone-900 text-white"
-                : "text-stone-500 hover:bg-stone-100"
-              }`}
+            onClick={() => setMode('paper')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'paper' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+            }`}
           >
             <FileText size={13} /> Question paper
           </button>
           <button
             type="button"
-            onClick={() => setMode("answerKey")}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === "answerKey"
-                ? "bg-stone-900 text-white"
-                : "text-stone-500 hover:bg-stone-100"
-              }`}
+            onClick={() => setMode('answerKey')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'answerKey' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+            }`}
           >
             <KeyRound size={13} /> Answer key
           </button>
@@ -152,10 +146,11 @@ export function PreviewPanel({
                   type="button"
                   title={opt.title}
                   onClick={() => handleColumnsChange(opt.value)}
-                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${columns === opt.value
-                      ? "bg-stone-900 text-white"
-                      : "bg-white text-stone-500 hover:bg-stone-50"
-                    }`}
+                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${
+                    columns === opt.value
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-white text-stone-500 hover:bg-stone-50'
+                  }`}
                 >
                   {opt.label}
                 </button>
@@ -208,14 +203,10 @@ export function PreviewPanel({
           >
             <ZoomOut size={14} />
           </button>
-          <span className="w-10 text-center text-xs text-stone-500">
-            {Math.round(zoom * 100)}%
-          </span>
+          <span className="w-10 text-center text-xs text-stone-500">{Math.round(zoom * 100)}%</span>
           <button
             type="button"
-            onClick={() =>
-              setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))
-            }
+            onClick={() => setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}
             className="flex h-7 w-7 items-center justify-center rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-700"
           >
             <ZoomIn size={14} />
@@ -234,12 +225,12 @@ export function PreviewPanel({
       {/* Preview area */}
       <div className="flex-1 overflow-auto px-8 py-8">
         {/* Both previews stay mounted so refs are always valid for PDF export */}
-        <div style={{ display: mode === "paper" ? "block" : "none" }}>
+        <div style={{ display: mode === 'paper' ? 'block' : 'none' }}>
           <div
             style={{
               transform: `scale(${zoom})`,
-              transformOrigin: "top center",
-              transition: "transform 0.15s ease-out",
+              transformOrigin: 'top center',
+              transition: 'transform 0.15s ease-out',
             }}
           >
             <A4Preview
@@ -251,12 +242,12 @@ export function PreviewPanel({
             />
           </div>
         </div>
-        <div style={{ display: mode === "answerKey" ? "block" : "none" }}>
+        <div style={{ display: mode === 'answerKey' ? 'block' : 'none' }}>
           <div
             style={{
               transform: `scale(${zoom})`,
-              transformOrigin: "top center",
-              transition: "transform 0.15s ease-out",
+              transformOrigin: 'top center',
+              transition: 'transform 0.15s ease-out',
             }}
           >
             <AnswerKeyPreview

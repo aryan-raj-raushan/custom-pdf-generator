@@ -1,12 +1,12 @@
 // components/preview/QuestionBlock.tsx
-"use client";
+'use client';
 
-import React from "react";
-import { Question, ExamMetadata } from "@/types/exam";
-import { PREVIEW_COLORS } from "@/lib/previewTheme";
-import { MathText } from "@/lib/renderMath";
-import { ColumnCount } from "./A4Preview";
-import { FONT_SIZE_DEFAULT } from "./PreviewPanel";
+import React from 'react';
+import { Question, ExamMetadata } from '@/types/exam';
+import { PREVIEW_COLORS } from '@/lib/previewTheme';
+import { MathText } from '@/lib/renderMath';
+import { ColumnCount } from './A4Preview';
+import { FONT_SIZE_DEFAULT } from './PreviewPanel';
 
 interface QuestionBlockProps {
   question: Question;
@@ -38,18 +38,26 @@ function deriveTextSizes(
   const colOffset: Record<ColumnCount, number> = { 1: 1, 2: 0, 3: -1 };
   const base = fontSize + colOffset[columns];
   return {
-    question: base + delta * 0,   // base already has delta folded in via `fontSize`
-    option: base - 0.5,           // options always 0.5px smaller than question text
+    question: base + delta * 0, // base already has delta folded in via `fontSize`
+    option: base - 0.5, // options always 0.5px smaller than question text
   };
 }
 
 export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps>(
   (
-    { question, number, metadata, isHighlighted, showFlagIndicator, columns = 2, fontSize = FONT_SIZE_DEFAULT },
+    {
+      question,
+      number,
+      metadata,
+      isHighlighted,
+      showFlagIndicator,
+      columns = 2,
+      fontSize = FONT_SIZE_DEFAULT,
+    },
     ref,
   ) => {
-    const showHi = metadata.language !== "en";
-    const showEn = metadata.language !== "hi";
+    const showHi = metadata.language !== 'en';
+    const showEn = metadata.language !== 'hi';
     const marks = question.marks ?? metadata.marksPerQuestion ?? 1;
     const hasFlags = (question.importFlags?.length ?? 0) > 0;
 
@@ -57,11 +65,7 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
 
     // In 3-col mode, options go single-column to avoid being unreadable
     const optionGrid =
-      columns === 3
-        ? "grid-cols-1"
-        : columns === 1
-          ? "grid-cols-2 gap-x-4"
-          : "grid-cols-2 gap-x-2";
+      columns === 3 ? 'grid-cols-1' : columns === 1 ? 'grid-cols-2 gap-x-4' : 'grid-cols-2 gap-x-2';
 
     return (
       <div
@@ -72,10 +76,10 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
           fontSize: `${qSize}px`,
           ...(isHighlighted
             ? {
-              backgroundColor: "rgba(245, 158, 11, 0.12)",
-              outline: "2px solid rgba(245, 158, 11, 0.6)",
-              outlineOffset: "2px",
-            }
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                outline: '2px solid rgba(245, 158, 11, 0.6)',
+                outlineOffset: '2px',
+              }
             : undefined),
         }}
       >
@@ -93,59 +97,34 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
           <div className="flex-1">
             {showEn && question.textEn && (
               <p>
-                {question.hasMath ? (
-                  <MathText text={question.textEn} />
-                ) : (
-                  question.textEn
-                )}
-                <span
-                  className="ml-1 font-medium"
-                  style={{ color: PREVIEW_COLORS.secondaryText }}
-                >
+                {question.hasMath ? <MathText text={question.textEn} /> : question.textEn}
+                <span className="ml-1 font-medium" style={{ color: PREVIEW_COLORS.secondaryText }}>
                   [{marks}]
                 </span>
               </p>
             )}
             {showHi && question.textHi && (
-              <p
-                className="font-devanagari"
-                style={{ color: PREVIEW_COLORS.quaternaryText }}
-              >
-                {question.hasMath ? (
-                  <MathText text={question.textHi} />
-                ) : (
-                  question.textHi
-                )}
+              <p className="font-devanagari" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+                {question.hasMath ? <MathText text={question.textHi} /> : question.textHi}
               </p>
             )}
 
             {question.imageDataUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={question.imageDataUrl}
-                alt=""
-                className="my-1 max-h-24 object-contain"
-              />
+              <img src={question.imageDataUrl} alt="" className="my-1 max-h-24 object-contain" />
             )}
 
-            {question.type === "mcq" && question.options && (
+            {question.type === 'mcq' && question.options && (
               <div className={`mt-1 grid ${optionGrid} gap-y-0.5`}>
                 {question.options.map((opt, i) => (
                   <div key={opt.id} className="flex gap-1">
-                    <span
-                      className="font-semibold"
-                      style={{ fontSize: `${oSize}px` }}
-                    >
+                    <span className="font-semibold" style={{ fontSize: `${oSize}px` }}>
                       ({String.fromCharCode(97 + i)})
                     </span>
                     <div style={{ fontSize: `${oSize}px` }}>
                       {showEn && (
                         <span>
-                          {question.hasMath ? (
-                            <MathText text={opt.textEn} />
-                          ) : (
-                            opt.textEn
-                          )}
+                          {question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}
                         </span>
                       )}
                       {showHi && opt.textHi && (
@@ -156,11 +135,7 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
                             fontSize: `${oSize - 0.5}px`,
                           }}
                         >
-                          {question.hasMath ? (
-                            <MathText text={opt.textHi} />
-                          ) : (
-                            opt.textHi
-                          )}
+                          {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
                         </span>
                       )}
                     </div>
@@ -169,7 +144,7 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
               </div>
             )}
 
-            {(question.type === "short" || question.type === "long") && (
+            {(question.type === 'short' || question.type === 'long') && (
               <div className="mt-1.5 flex flex-col gap-2.5">
                 {Array.from({
                   length: question.answerSpaceLines ?? 3,
@@ -189,6 +164,6 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
   },
 );
 
-QuestionBlock.displayName = "QuestionBlock";
+QuestionBlock.displayName = 'QuestionBlock';
 
 export default QuestionBlock;

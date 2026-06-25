@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -15,126 +15,120 @@ import {
   Lock,
   LogOut,
   Save,
-} from "lucide-react";
-import { ExamMetadata, ExamPaper, ExamSection, Question } from "@/types/exam";
-import { Tabs } from "@/components/ui/Tabs";
-import { Button } from "@/components/ui/Button";
-import { MetadataForm } from "@/components/metadata/MetaDataForm";
-import { QuestionsPanel } from "@/components/questions/QuestionsPanel";
-import { PreviewPanel } from "@/components/preview/PreviewPanel";
-import { ColumnCount } from "@/components/preview/A4Preview";
-import { SaveAsPdfButton } from "@/components/layout/SaveAsPdfButton";
-import { BulkImportModal } from "@/components/import/BulkImportModal";
-import { ImportIssuesPanel, ImportSummaryBadge } from "@/components/import/ImportIssuesPanel";
-import { parseBulkImportText } from "@/lib/bulkImportParser";
+} from 'lucide-react';
+import { ExamMetadata, ExamPaper, ExamSection, Question } from '@/types/exam';
+import { Tabs } from '@/components/ui/Tabs';
+import { Button } from '@/components/ui/Button';
+import { MetadataForm } from '@/components/metadata/MetaDataForm';
+import { QuestionsPanel } from '@/components/questions/QuestionsPanel';
+import { PreviewPanel } from '@/components/preview/PreviewPanel';
+import { ColumnCount } from '@/components/preview/A4Preview';
+import { SaveAsPdfButton } from '@/components/layout/SaveAsPdfButton';
+import { BulkImportModal } from '@/components/import/BulkImportModal';
+import { ImportIssuesPanel, ImportSummaryBadge } from '@/components/import/ImportIssuesPanel';
+import { parseBulkImportText } from '@/lib/bulkImportParser';
 
 export const DEFAULT_INSTRUCTIONS_EN = [
-  "This question paper contains multiple choice questions (MCQs), short answer and long answer type questions.",
-  "All questions are compulsory unless stated otherwise.",
-  "Read each question carefully before answering.",
-  "Use of calculator and mobile phone is strictly prohibited in the examination hall.",
-  "Rough work must be done only in the space provided.",
+  'This question paper contains multiple choice questions (MCQs), short answer and long answer type questions.',
+  'All questions are compulsory unless stated otherwise.',
+  'Read each question carefully before answering.',
+  'Use of calculator and mobile phone is strictly prohibited in the examination hall.',
+  'Rough work must be done only in the space provided.',
 ];
 
 export const DEFAULT_INSTRUCTIONS_HI = [
-  "इस प्रश्न पत्र में बहुविकल्पीय प्रश्न (MCQs), लघु उत्तरीय एवं दीर्घ उत्तरीय प्रश्न सम्मिलित हैं।",
-  "जब तक अन्यथा न कहा जाए, सभी प्रश्न अनिवार्य हैं।",
-  "उत्तर देने से पूर्व प्रत्येक प्रश्न को ध्यानपूर्वक पढ़ें।",
-  "परीक्षा कक्ष में कैलकुलेटर एवं मोबाइल फोन का प्रयोग पूर्णतः वर्जित है।",
-  "रफ कार्य केवल दिए गए स्थान पर ही करें।",
+  'इस प्रश्न पत्र में बहुविकल्पीय प्रश्न (MCQs), लघु उत्तरीय एवं दीर्घ उत्तरीय प्रश्न सम्मिलित हैं।',
+  'जब तक अन्यथा न कहा जाए, सभी प्रश्न अनिवार्य हैं।',
+  'उत्तर देने से पूर्व प्रत्येक प्रश्न को ध्यानपूर्वक पढ़ें।',
+  'परीक्षा कक्ष में कैलकुलेटर एवं मोबाइल फोन का प्रयोग पूर्णतः वर्जित है।',
+  'रफ कार्य केवल दिए गए स्थान पर ही करें।',
 ];
 
-export type Language = "en" | "hi";
-export type QuestionType = "mcq" | "short" | "long";
-export type Subject =
-  | "general"
-  | "mathematics"
-  | "reasoning"
-  | "english"
-  | "hindi"
-  | "gk";
+export type Language = 'en' | 'hi';
+export type QuestionType = 'mcq' | 'short' | 'long';
+export type Subject = 'general' | 'mathematics' | 'reasoning' | 'english' | 'hindi' | 'gk';
 
 export function createEmptyMetadata(): ExamMetadata {
   return {
-    examTitle: "",
-    organisation: "",
-    examCode: "",
+    examTitle: '',
+    organisation: '',
+    examCode: '',
     date: new Date().toISOString().slice(0, 10),
-    duration: "2 Hours",
+    duration: '2 Hours',
     maxMarks: 100,
     totalQuestions: 0,
     rollNoLabel: true,
     candidateNameLabel: true,
-    setCode: "A",
-    bookletSeries: "",
+    setCode: 'A',
+    bookletSeries: '',
     generalInstructions: [...DEFAULT_INSTRUCTIONS_EN],
     generalInstructionsHi: [...DEFAULT_INSTRUCTIONS_HI],
     negativeMarking: { enabled: true, value: 0.25 },
     marksPerQuestion: 1,
-    language: "bilingual",
+    language: 'bilingual',
     columns: 2, // default layout
     fontSize: 11,
   };
 }
 
 export function createEmptyQuestion(
-  type: QuestionType = "mcq",
-  subject: Subject = "general",
+  type: QuestionType = 'mcq',
+  subject: Subject = 'general',
 ): Question {
   return {
     id: crypto.randomUUID(),
     type,
     subject,
-    textEn: "",
-    textHi: "",
+    textEn: '',
+    textHi: '',
     hasMath: false,
     options:
-      type === "mcq"
+      type === 'mcq'
         ? [
-          { id: crypto.randomUUID(), textEn: "", textHi: "" },
-          { id: crypto.randomUUID(), textEn: "", textHi: "" },
-          { id: crypto.randomUUID(), textEn: "", textHi: "" },
-          { id: crypto.randomUUID(), textEn: "", textHi: "" },
-        ]
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+          ]
         : undefined,
     marks: 1,
-    answerSpaceLines: type === "short" ? 3 : type === "long" ? 8 : undefined,
+    answerSpaceLines: type === 'short' ? 3 : type === 'long' ? 8 : undefined,
   };
 }
 
-export function createEmptySection(name = "Section 1"): ExamSection {
+export function createEmptySection(name = 'Section 1'): ExamSection {
   return {
     id: crypto.randomUUID(),
     titleEn: name,
-    titleHi: "",
+    titleHi: '',
     questions: [],
   };
 }
 
 export type ImportFlagType =
-  | "missing_answer"
-  | "missing_solution"
-  | "image_question"
-  | "image_option"
-  | "ambiguous_options"
-  | "answer_letter_mismatch"
-  | "low_confidence";
+  | 'missing_answer'
+  | 'missing_solution'
+  | 'image_question'
+  | 'image_option'
+  | 'ambiguous_options'
+  | 'answer_letter_mismatch'
+  | 'low_confidence';
 
 const LEFT_TABS = [
-  { id: "metadata", label: "Exam details", icon: <FileSpreadsheet size={14} /> },
-  { id: "questions", label: "Questions", icon: <ListChecks size={14} /> },
+  { id: 'metadata', label: 'Exam details', icon: <FileSpreadsheet size={14} /> },
+  { id: 'questions', label: 'Questions', icon: <ListChecks size={14} /> },
 ];
 
 const DEFAULT_PAPER: ExamPaper = {
   metadata: createEmptyMetadata(),
-  sections: [createEmptySection("Section A - General Awareness")],
+  sections: [createEmptySection('Section A - General Awareness')],
 };
 
 interface CustomPdfCreatorProps {
   initialPaper?: ExamPaper;
   paperId?: string;
   initialName?: string;
-  userPermission?: "edit" | "view";
+  userPermission?: 'edit' | 'view';
 }
 
 export function CustomPdfCreator({
@@ -143,14 +137,14 @@ export function CustomPdfCreator({
   initialName,
   userPermission,
 }: Readonly<CustomPdfCreatorProps>) {
-  const canEdit = userPermission !== "view";
+  const canEdit = userPermission !== 'view';
   const router = useRouter();
   const [paper, setPaper] = useState<ExamPaper>(initialPaper ?? DEFAULT_PAPER);
-  const [activeTab, setActiveTab] = useState("metadata");
+  const [activeTab, setActiveTab] = useState('metadata');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<string | null>(null);
   const [jumpToken, setJumpToken] = useState(0);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
 
   const saveMenuRef = useRef<HTMLDivElement>(null);
@@ -162,8 +156,8 @@ export function CustomPdfCreator({
         setSaveMenuOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, [saveMenuOpen]);
 
   const previewRef = useRef<HTMLDivElement>(null!);
@@ -185,20 +179,20 @@ export function CustomPdfCreator({
       };
       return { ...p, sections };
     });
-    setActiveTab("questions");
+    setActiveTab('questions');
   }
 
   function jumpToQuestion(questionId: string) {
     setHighlightedQuestionId(questionId);
     setJumpToken((t) => t + 1);
-    setActiveTab("questions");
+    setActiveTab('questions');
 
     let attempts = 0;
     const tryScroll = () => {
       attempts += 1;
       const node = document.querySelector<HTMLElement>(`[data-question-id="${questionId}"]`);
       if (node) {
-        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       if (attempts < 20) requestAnimationFrame(tryScroll);
@@ -237,35 +231,35 @@ export function CustomPdfCreator({
   function handleFontSizeChange(fontSize: number) {
     setPaper((p) => ({
       ...p,
-      metadata: {...p.metadata, fontSize}
-    }))
+      metadata: { ...p.metadata, fontSize },
+    }));
   }
 
-  async function handleSave(status: "draft" | "saved") {
-    if (!paperId || saveState === "saving") return;
+  async function handleSave(status: 'draft' | 'saved') {
+    if (!paperId || saveState === 'saving') return;
 
-    setSaveState("saving");
+    setSaveState('saving');
     try {
       const name =
         initialName?.trim() ||
         paper.metadata.examTitle.trim() ||
         paper.metadata.examCode?.trim() ||
-        "Untitled paper";
+        'Untitled paper';
 
       const res = await fetch(`/api/papers/${paperId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, paper, status }),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) throw new Error('Failed to save');
 
-      setSaveState("saved");
+      setSaveState('saved');
       window.setTimeout(() => {
-        setSaveState((current) => (current === "saved" ? "idle" : current));
+        setSaveState((current) => (current === 'saved' ? 'idle' : current));
       }, 1800);
     } catch {
-      setSaveState("error");
+      setSaveState('error');
     }
   }
 
@@ -278,16 +272,16 @@ export function CustomPdfCreator({
           </div>
           <div>
             <h1 className="text-sm font-semibold text-stone-900">
-              {initialName || "Custom PDF Creator"}
+              {initialName || 'Custom PDF Creator'}
             </h1>
             <div className="flex items-center gap-2">
               <p className="text-[11px] text-stone-400">
-                {totalQuestions} question{totalQuestions === 1 ? "" : "s"} ·{" "}
-                {paper.sections.length} section
-                {paper.sections.length === 1 ? "" : "s"}
+                {totalQuestions} question{totalQuestions === 1 ? '' : 's'} · {paper.sections.length}{' '}
+                section
+                {paper.sections.length === 1 ? '' : 's'}
               </p>
               {canEdit && <ImportSummaryBadge count={totalFlagged} />}
-              {saveState === "error" ? (
+              {saveState === 'error' ? (
                 <span className="text-[11px] font-medium text-red-500">Save failed</span>
               ) : null}
             </div>
@@ -297,7 +291,7 @@ export function CustomPdfCreator({
         <div className="flex items-center gap-2">
           {/* Back — always visible */}
           {paperId ? (
-            <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+            <Button variant="secondary" onClick={() => router.push('/dashboard')}>
               <ArrowLeft size={15} /> Back
             </Button>
           ) : null}
@@ -312,7 +306,7 @@ export function CustomPdfCreator({
           {/* Export answer key — always visible */}
           <SaveAsPdfButton
             previewRef={answerKeyRef}
-            fileName={`${paper.metadata.examCode || paper.metadata.examTitle || "question-paper"}-answer-key`}
+            fileName={`${paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}-answer-key`}
             pageClassName="answer-key-page"
             label="Export answer key"
             variant="secondary"
@@ -321,7 +315,7 @@ export function CustomPdfCreator({
           {/* Export as PDF — always visible */}
           <SaveAsPdfButton
             previewRef={previewRef}
-            fileName={paper.metadata.examCode || paper.metadata.examTitle || "question-paper"}
+            fileName={paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}
             pageClassName="pdf-page"
             label="Export as PDF"
             variant="secondary"
@@ -333,16 +327,16 @@ export function CustomPdfCreator({
               <Button
                 variant="primary"
                 onClick={() => setSaveMenuOpen((o) => !o)}
-                disabled={saveState === "saving"}
+                disabled={saveState === 'saving'}
               >
-                {saveState === "saving" ? (
+                {saveState === 'saving' ? (
                   <Loader2 size={15} className="animate-spin" />
-                ) : saveState === "saved" ? (
+                ) : saveState === 'saved' ? (
                   <CheckCircle2 size={15} />
                 ) : (
                   <Save size={15} />
                 )}
-                {saveState === "saved" ? "Saved" : "Save"}
+                {saveState === 'saved' ? 'Saved' : 'Save'}
                 <ChevronDown size={14} />
               </Button>
               {saveMenuOpen ? (
@@ -351,7 +345,7 @@ export function CustomPdfCreator({
                     type="button"
                     onClick={() => {
                       setSaveMenuOpen(false);
-                      handleSave("draft");
+                      handleSave('draft');
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
                   >
@@ -362,7 +356,7 @@ export function CustomPdfCreator({
                     type="button"
                     onClick={() => {
                       setSaveMenuOpen(false);
-                      handleSave("saved");
+                      handleSave('saved');
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-900 hover:bg-stone-100"
                   >
@@ -376,7 +370,7 @@ export function CustomPdfCreator({
 
           {/* Logout — always visible */}
           {paperId ? (
-            <Button variant="secondary" onClick={() => signOut({ callbackUrl: "/login" })}>
+            <Button variant="secondary" onClick={() => signOut({ callbackUrl: '/login' })}>
               <LogOut size={15} /> Logout
             </Button>
           ) : null}
@@ -402,7 +396,7 @@ export function CustomPdfCreator({
             </div>
           ) : (
             <div className="relative flex-1 overflow-y-auto px-4 pt-4">
-              {activeTab === "metadata" ? (
+              {activeTab === 'metadata' ? (
                 <MetadataForm
                   metadata={paper.metadata}
                   onChange={(metadata) => setPaper((p) => ({ ...p, metadata }))}

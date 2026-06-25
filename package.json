@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --check '**/*.{js,md,scss,ts,tsx}'",
+    "format:write": "prettier --cache --write '**/*.{js,md,scss,ts,tsx}'"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -19,6 +21,7 @@
     "mongodb": "^6.18.0",
     "next": "16.2.9",
     "next-auth": "^4.24.14",
+    "prettier": "^3.8.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

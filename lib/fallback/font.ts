@@ -26,19 +26,19 @@
 // styles/exam-paper.css works too — just slightly less deterministic
 // for the very first export right after a cold page load.
 
-import { Tinos, Noto_Sans_Devanagari } from "next/font/google";
+import { Tinos, Noto_Sans_Devanagari } from 'next/font/google';
 
 export const tinos = Tinos({
-    subsets: ["latin"],
-    weight: ["400", "700"],
-    style: ["normal", "italic"],
-    variable: "--font-tinos",
-    display: "swap",
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-tinos',
+  display: 'swap',
 });
 
 export const notoDevanagari = Noto_Sans_Devanagari({
-    subsets: ["devanagari"],
-    weight: ["400", "500", "600", "700"],
-    variable: "--font-noto-devanagari",
-    display: "swap",
+  subsets: ['devanagari'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-noto-devanagari',
+  display: 'swap',
 });
