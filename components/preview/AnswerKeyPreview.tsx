@@ -4,7 +4,7 @@ import React, { useMemo, useRef } from 'react';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { MathText } from '@/lib/renderMath';
 import { ExamPaper } from '@/types/exam';
-import { ColumnCount } from './A4Preview';
+import { ColumnCount, PageWatermark } from './A4Preview';
 import { useAutoPaginate } from '@/lib/usePagination';
 
 interface AnswerKeyPreviewProps {
@@ -258,6 +258,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
         */}
         <div
           aria-hidden
+          data-pdf-ignore="true"
           style={{
             position: 'fixed',
             top: '-9999px',
@@ -304,6 +305,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
               fontFamily: "var(--font-paper, 'Tinos', 'Times New Roman', serif)",
             }}
           >
+            <PageWatermark metadata={paper.metadata} />
             {/* ── Page 1: doc header + answer grid + solutions heading ── */}
             {pageIndex === 0 && (
               <>

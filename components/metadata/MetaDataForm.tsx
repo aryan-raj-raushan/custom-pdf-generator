@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Trash2, Upload, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Trash2, Upload, X, Droplets } from 'lucide-react';
 import { ExamMetadata } from '@/types/exam';
 import { Field, Input, Select, TextArea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,20 @@ interface MetadataFormProps {
 
 export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const watermarkImageRef = useRef<HTMLInputElement>(null);
+  const coverImageRef = useRef<HTMLInputElement>(null);
+
+  function handleCoverImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () =>
+      update('coverPage', {
+        enabled: true,
+        imageDataUrl: reader.result as string,
+      });
+    reader.readAsDataURL(file);
+  }
 
   function update<K extends keyof ExamMetadata>(key: K, value: ExamMetadata[K]) {
     onChange({ ...metadata, [key]: value });
@@ -49,6 +63,19 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => update('logoDataUrl', reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function handleWatermarkImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () =>
+      update('watermark', {
+        ...metadata.watermark,
+        type: 'image',
+        imageDataUrl: reader.result as string,
+      });
     reader.readAsDataURL(file);
   }
 
@@ -159,6 +186,64 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               />
             </div>
           </Field>
+        </div>
+      </section>
+
+      {/* ── Cover page ────────────────────────────────── */}
+      <section className="flex flex-col gap-3 border-t border-stone-100 pt-5">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Cover page</SectionLabel>
+          {metadata.coverPage?.imageDataUrl && (
+            <Toggle
+              label=""
+              checked={metadata.coverPage?.enabled ?? false}
+              onChange={(v) => update('coverPage', { ...metadata.coverPage!, enabled: v })}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => coverImageRef.current?.click()}
+            title="A4 portrait images fit best"
+            className="flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-stone-300 bg-stone-50 text-stone-400 hover:border-stone-400 hover:text-stone-600"
+          >
+            {metadata.coverPage?.imageDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={metadata.coverPage.imageDataUrl}
+                alt="Cover"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <Upload size={18} />
+            )}
+          </button>
+          <input
+            ref={coverImageRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverImageUpload}
+          />
+          <div className="flex flex-col gap-1">
+            <span className="text-[13px] font-medium text-stone-700">
+              {metadata.coverPage?.imageDataUrl ? 'Cover image uploaded' : 'Add a cover page image'}
+            </span>
+            <span className="text-xs text-stone-400">
+              Inserted as page 1 · fit to A4 without cropping or overflow
+            </span>
+            {metadata.coverPage?.imageDataUrl && (
+              <button
+                type="button"
+                onClick={() => update('coverPage', { enabled: false, imageDataUrl: undefined })}
+                className="flex w-fit items-center gap-1 text-[11px] text-stone-400 hover:text-red-500"
+              >
+                <X size={12} /> Remove
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
@@ -319,6 +404,192 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Watermark ─────────────────────────────────── */}
+      <section className="flex flex-col gap-3 border-t border-stone-100 pt-5">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Watermark</SectionLabel>
+          <Toggle
+            label=""
+            checked={metadata.watermark?.enabled ?? false}
+            onChange={(v) =>
+              update('watermark', {
+                type: 'text',
+                text: '',
+                opacity: 0.12,
+                ...metadata.watermark,
+                enabled: v,
+              })
+            }
+          />
+        </div>
+
+        <AnimatePresence initial={false}>
+          {metadata.watermark?.enabled && (
+            <motion.div
+              key="watermark-settings"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-3 rounded-lg border border-stone-100 bg-stone-50/60 p-3">
+                {/* Type toggle */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => update('watermark', { ...metadata.watermark!, type: 'text' })}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      (metadata.watermark?.type ?? 'text') === 'text'
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                    }`}
+                  >
+                    Text
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update('watermark', { ...metadata.watermark!, type: 'image' })}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      metadata.watermark?.type === 'image'
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                    }`}
+                  >
+                    Image
+                  </button>
+                </div>
+
+                {/* Text mode */}
+                {(metadata.watermark?.type ?? 'text') === 'text' && (
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-stone-500">
+                      Watermark text
+                    </label>
+                    <Input
+                      value={metadata.watermark?.text ?? ''}
+                      onChange={(e) =>
+                        update('watermark', {
+                          ...metadata.watermark!,
+                          type: 'text',
+                          text: e.target.value,
+                        })
+                      }
+                      placeholder="CONFIDENTIAL · DRAFT · Institute Name"
+                      style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
+                    />
+                    <p className="mt-1 text-[10px] text-stone-400">
+                      Hindi / Devanagari text supported — e.g. &quot;प्रारूप&quot;
+                    </p>
+                  </div>
+                )}
+
+                {/* Image mode */}
+                {metadata.watermark?.type === 'image' && (
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-stone-500">
+                      Watermark image
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => watermarkImageRef.current?.click()}
+                        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-stone-300 bg-white text-stone-400 hover:border-stone-400 hover:text-stone-600"
+                      >
+                        {metadata.watermark?.imageDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={metadata.watermark.imageDataUrl}
+                            alt="Watermark"
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <Upload size={18} />
+                        )}
+                      </button>
+                      <input
+                        ref={watermarkImageRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleWatermarkImageUpload}
+                      />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[12px] font-medium text-stone-700">
+                          {metadata.watermark?.imageDataUrl ? 'Image uploaded' : 'Upload image'}
+                        </span>
+                        <span className="text-[11px] text-stone-400">
+                          PNG with transparency works best
+                        </span>
+                        {metadata.watermark?.imageDataUrl && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              update('watermark', {
+                                ...metadata.watermark!,
+                                imageDataUrl: undefined,
+                              })
+                            }
+                            className="flex w-fit items-center gap-1 text-[11px] text-stone-400 hover:text-red-500"
+                          >
+                            <X size={12} /> Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Opacity slider */}
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label className="text-[11px] font-medium text-stone-500">Opacity</label>
+                    <span className="text-[11px] font-semibold text-stone-600">
+                      {Math.round((metadata.watermark?.opacity ?? 0.12) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-stone-400">Faint</span>
+                    <input
+                      type="range"
+                      min={4}
+                      max={30}
+                      step={1}
+                      value={Math.round((metadata.watermark?.opacity ?? 0.12) * 100)}
+                      onChange={(e) =>
+                        update('watermark', {
+                          ...metadata.watermark!,
+                          opacity: Number(e.target.value) / 100,
+                        })
+                      }
+                      className="flex-1 accent-stone-900"
+                    />
+                    <span className="text-[10px] text-stone-400">Bold</span>
+                  </div>
+                  {/* Live preview strip */}
+                  <div className="mt-2 flex items-center justify-center rounded-md border border-stone-100 bg-white py-3">
+                    <span
+                      className="text-[18px] font-black uppercase tracking-widest text-stone-900"
+                      style={{
+                        opacity: metadata.watermark?.opacity ?? 0.12,
+                        fontFamily: 'var(--font-devanagari, inherit)',
+                        rotate: '-20deg',
+                        display: 'inline-block',
+                        transform: 'rotate(-20deg)',
+                      }}
+                    >
+                      {(metadata.watermark?.type ?? 'text') === 'text'
+                        ? metadata.watermark?.text || 'Preview'
+                        : '[ Image ]'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
     </motion.div>
   );

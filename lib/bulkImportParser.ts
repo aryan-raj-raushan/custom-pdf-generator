@@ -81,6 +81,26 @@ const EMPTY_OR_IMAGE_OPTION_RE = /^\s*(image|img|चित्र|figure|आक�
 // followed by an option whose entire content is a diagram.
 const IMAGE_SENTINEL_RE = /\[\[IMG:(\d+)\]\]/g;
 
+// A bare numbered or roman-numeral sub-statement marker at the start of a
+// continuation line — "1 सर्वोच्च..." / "i अपरिमेय..." / "iii जिसका..." —
+// with no punctuation after the marker. We don't touch these during
+// parsing (they're not question/option/answer lines, just stem
+// continuation), but for display we normalize them to "1. ..." / "i. ..."
+// so they read as a proper list instead of running into the marker.
+const BARE_NUMBER_MARKER_RE = /^(\d{1,2})\s+(\S.*)$/;
+const BARE_ROMAN_MARKER_RE = /^(i{1,3}|iv)\s+(\S.*)$/;
+
+const SUB_STATEMENT_MARKER_INLINE_RE = /(^|[।.:])\s*(\d{1,2}|i{1,3}|iv)\s+(?=\S)/gu;
+
+function punctuateSubStatementMarker(line: string): string {
+  return line.replace(SUB_STATEMENT_MARKER_INLINE_RE, (_match, prefix, marker) => {
+    // No newline before the very first marker if it's at the start of the
+    // string (nothing to break away from yet).
+    const lineBreak = prefix === '' ? '' : '\n';
+    return `${prefix}${lineBreak}${marker}. `;
+  });
+}
+
 interface RawQuestionBlock {
   sourceIndex: number;
   questionLines: string[];
@@ -335,7 +355,7 @@ function buildQuestion(
   const questionImageIndices: number[] = [];
   for (const line of block.questionLines) {
     const { cleaned, indices } = extractImageSentinels(line);
-    questionLinesNoSentinels.push(cleaned);
+    questionLinesNoSentinels.push(punctuateSubStatementMarker(cleaned));
     questionImageIndices.push(...indices);
   }
 

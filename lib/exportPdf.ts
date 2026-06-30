@@ -146,7 +146,8 @@ export async function exportPreviewToPdf(rootEl: HTMLElement, options: ExportPdf
       windowWidth: node.offsetWidth,
       windowHeight: node.offsetHeight,
       // Ignore the measurement div that might be nearby in the real DOM
-      ignoreElements: (el) => el.hasAttribute('aria-hidden'),
+      // ignoreElements: (el) => el.hasAttribute('aria-hidden'),
+      ignoreElements: (el) => el.hasAttribute('data-pdf-ignore'),
     });
 
     document.body.removeChild(clone);

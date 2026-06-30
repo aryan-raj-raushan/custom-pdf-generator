@@ -106,6 +106,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
           <div
             ref={measureRef}
             aria-hidden
+            data-pdf-ignore="true"
             className={`pointer-events-none grid ${gridClass} gap-x-5`}
             style={{
               width: MEASURE_WIDTHS[columns],
@@ -128,6 +129,10 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
             ))}
           </div>
         </div>
+
+        {paper.metadata.coverPage?.enabled && paper.metadata.coverPage.imageDataUrl && (
+          <CoverPage imageDataUrl={paper.metadata.coverPage.imageDataUrl} />
+        )}
 
         {pages.map((pageBlockIds, pageIndex) => (
           <Page
@@ -212,6 +217,115 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
 A4Preview.displayName = 'A4Preview';
 
 // ─────────────────────────────────────────────────────────
+//  PageWatermark — absolutely centred, rotated, pointer-events
+//  none so it never interferes with text selection or export
+// ─────────────────────────────────────────────────────────
+export function PageWatermark({ metadata }: Readonly<{ metadata: ExamPaper['metadata'] }>) {
+  const wm = metadata.watermark;
+  if (!wm?.enabled) return null;
+
+  const opacity = wm.opacity ?? 0.12;
+
+  // Image watermark
+  if (wm.type === 'image' && wm.imageDataUrl) {
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={wm.imageDataUrl}
+          alt=""
+          style={{
+            width: 450,
+            height: 450,
+            objectFit: 'contain',
+            opacity,
+            transform: 'rotate(-25deg)',
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Text watermark
+  const text = wm.text?.trim();
+  if (!text) return null;
+
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: 1,
+        overflow: 'hidden',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-devanagari, var(--font-paper, 'Tinos', serif))",
+          fontSize: text.length > 18 ? 40 : text.length > 10 ? 52 : 64,
+          fontWeight: 900,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: PREVIEW_COLORS.pageText,
+          opacity,
+          transform: 'rotate(-28deg)',
+          whiteSpace: 'nowrap',
+          userSelect: 'none',
+          lineHeight: 1,
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function CoverPage({ imageDataUrl }: Readonly<{ imageDataUrl: string }>) {
+  return (
+    <div
+      className="pdf-page relative"
+      style={{
+        width: 794,
+        height: 1123, // fixed, not minHeight — must be exactly one A4 page
+        backgroundColor: '#ffffff',
+        boxShadow: PREVIEW_COLORS.pageShadow,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageDataUrl}
+        alt="Cover"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain', // scales down to fit, never crops/overflows; letterboxes on mismatched aspect ratios
+        }}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 //  Page wrapper — coaching variant swaps the default footer
 //  for CoachingPageFooter and adjusts bottom padding
 // ─────────────────────────────────────────────────────────
@@ -242,6 +356,7 @@ function Page({
         fontFamily: "var(--font-paper, 'Tinos', 'Times New Roman', serif)",
       }}
     >
+      <PageWatermark metadata={metadata} />
       {children}
 
       {isCoaching ? (

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, FilePlus, FolderPlus, Trash2 } from 'lucide-react';
+import { ChevronDown, FolderPlus, Trash2 } from 'lucide-react';
 import { ExamSection, ExamMetadata } from '@/types/exam';
 import { QuestionEditor } from './QuestionEditor';
 import { Button } from '@/components/ui/Button';

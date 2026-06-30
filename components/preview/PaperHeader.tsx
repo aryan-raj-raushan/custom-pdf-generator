@@ -325,7 +325,7 @@ export function CoachingPageFooter({
         className="flex shrink-0 items-center justify-center text-[9px] font-bold"
         style={{ width: 58, backgroundColor: brandColor, color: '#fff', minHeight: 22 }}
       >
-        //{pageNumber}
+        {pageNumber}
       </div>
 
       {/* Centre: institute / channel name */}

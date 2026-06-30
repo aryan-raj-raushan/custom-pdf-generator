@@ -51,8 +51,24 @@ export interface ExamMetadata {
 
   /** Coaching template only. Hex color for badge block + footer bars. Default '#1a1a1a'. */
   footerBrandColor?: string;
-}
 
+  watermark?: {
+    enabled: boolean;
+    type: 'text' | 'image';
+    /** Text watermark string. Devanagari supported. */
+    text?: string;
+    /** Image watermark — base64 data URL. PNG with transparency recommended. */
+    imageDataUrl?: string;
+    /** Opacity 0–1. Default 0.12. Slider range: 0.04–0.30. */
+    opacity?: number;
+  };
+
+  coverPage?: {
+    enabled: boolean;
+    /** Base64 data URL of the uploaded cover image. */
+    imageDataUrl?: string;
+  };
+}
 export interface QuestionOption {
   id: string;
   textEn: string;
