@@ -1,3 +1,4 @@
+// app/api/papers/[id]/route.ts
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -26,6 +27,7 @@ function buildMeta(paper: ExamPaper, totalQuestions: number) {
     language: paper.metadata.language,
     columns: (paper.metadata.columns ?? 2) as 1 | 2 | 3,
     fontSize: (paper.metadata.fontSize ?? 11) as number,
+    headerTemplate: paper.metadata.headerTemplate ?? 'classic',
   };
 }
 

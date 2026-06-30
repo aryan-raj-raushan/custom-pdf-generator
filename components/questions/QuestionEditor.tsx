@@ -23,6 +23,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   mcq: 'MCQ',
   short: 'Short answer',
   long: 'Long answer',
+  assertion_reason: 'Assertion-Reason',
 };
 
 const SUBJECT_LABELS: Record<Subject, string> = {
@@ -48,14 +49,15 @@ export function QuestionEditor({
   }
 
   function changeType(type: QuestionType) {
-    if (type === 'mcq' && !question.options) {
+    const usesOptions = type === 'mcq' || type === 'assertion_reason';
+    if (usesOptions && !question.options) {
       onChange({
         ...question,
         type,
         options: [0, 1, 2, 3].map(() => ({ id: crypto.randomUUID(), textEn: '', textHi: '' })),
         answerSpaceLines: undefined,
       });
-    } else if (type !== 'mcq') {
+    } else if (!usesOptions) {
       onChange({
         ...question,
         type,
@@ -240,6 +242,41 @@ export function QuestionEditor({
           />
         )}
 
+        {question.type === 'assertion_reason' && (
+          <div className="flex flex-col gap-2 rounded-md border border-stone-200 bg-stone-50/60 p-2">
+            <TextArea
+              value={question.assertionEn ?? ''}
+              onChange={(e) => update('assertionEn', e.target.value)}
+              placeholder="Assertion (A) — English"
+              rows={2}
+            />
+            {showHindi && (
+              <TextArea
+                value={question.assertionHi ?? ''}
+                onChange={(e) => update('assertionHi', e.target.value)}
+                placeholder="अभिकथन (A) — हिंदी"
+                rows={2}
+                style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
+              />
+            )}
+            <TextArea
+              value={question.reasonEn ?? ''}
+              onChange={(e) => update('reasonEn', e.target.value)}
+              placeholder="Reason (R) — English"
+              rows={2}
+            />
+            {showHindi && (
+              <TextArea
+                value={question.reasonHi ?? ''}
+                onChange={(e) => update('reasonHi', e.target.value)}
+                placeholder="कारण (R) — हिंदी"
+                rows={2}
+                style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
+              />
+            )}
+          </div>
+        )}
+
         {question.imageDataUrl && (
           <div className="relative w-fit">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -258,7 +295,7 @@ export function QuestionEditor({
           </div>
         )}
 
-        {question.type === 'mcq' && (
+        {(question.type === 'mcq' || question.type === 'assertion_reason') && (
           <div className="mt-1 flex flex-col gap-2">
             {(question.options ?? []).map((opt, i) => (
               <div key={opt.id} className="flex items-start gap-2">

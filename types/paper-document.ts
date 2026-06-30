@@ -22,6 +22,7 @@ export interface PaperDocument {
     language: ExamPaper['metadata']['language'];
     columns: 1 | 2 | 3; // layout preference, mirrored from metadata for dashboard
     fontSize: number;
+    headerTemplate: 'classic' | 'coaching' | 'minimal';
   };
 }
 

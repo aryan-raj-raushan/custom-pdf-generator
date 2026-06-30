@@ -45,7 +45,7 @@ export const DEFAULT_INSTRUCTIONS_HI = [
 ];
 
 export type Language = 'en' | 'hi';
-export type QuestionType = 'mcq' | 'short' | 'long';
+export type QuestionType = 'mcq' | 'short' | 'long' | 'assertion_reason';
 export type Subject = 'general' | 'mathematics' | 'reasoning' | 'english' | 'hindi' | 'gk';
 
 export function createEmptyMetadata(): ExamMetadata {

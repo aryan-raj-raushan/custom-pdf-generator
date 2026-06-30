@@ -5,14 +5,9 @@ import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Upload, X } from 'lucide-react';
 import { ExamMetadata } from '@/types/exam';
-import {
-  Field,
-  Input,
-  Select,
-  TextArea,
-  // inputClass
-} from '@/components/ui/Field';
+import { Field, Input, Select, TextArea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { TemplatePicker } from './TemplatePicker';
 
 interface MetadataFormProps {
   metadata: ExamMetadata;
@@ -64,8 +59,14 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       transition={{ duration: 0.25 }}
       className="flex flex-col gap-6 pb-10"
     >
-      {/* Identity */}
+      {/* ── Template ──────────────────────────────────── */}
       <section className="flex flex-col gap-4">
+        <SectionLabel>Header template</SectionLabel>
+        <TemplatePicker metadata={metadata} onChange={onChange} />
+      </section>
+
+      {/* ── Identity ──────────────────────────────────── */}
+      <section className="flex flex-col gap-4 border-t border-stone-100 pt-5">
         <SectionLabel>Exam identity</SectionLabel>
 
         <div className="flex items-center gap-3">
@@ -161,7 +162,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         </div>
       </section>
 
-      {/* Schedule & marking */}
+      {/* ── Schedule & marking ────────────────────────── */}
       <section className="flex flex-col gap-4 border-t border-stone-100 pt-5">
         <SectionLabel>Schedule & marking scheme</SectionLabel>
 
@@ -258,7 +259,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         </Field>
       </section>
 
-      {/* Candidate fields */}
+      {/* ── Candidate fields ──────────────────────────── */}
       <section className="flex flex-col gap-3 border-t border-stone-100 pt-5">
         <SectionLabel>Candidate detail boxes</SectionLabel>
         <Toggle
@@ -273,7 +274,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         />
       </section>
 
-      {/* Instructions */}
+      {/* ── Instructions ──────────────────────────────── */}
       <section className="flex flex-col gap-3 border-t border-stone-100 pt-5">
         <div className="flex items-center justify-between">
           <SectionLabel>General instructions</SectionLabel>

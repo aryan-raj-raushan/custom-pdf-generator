@@ -1,3 +1,4 @@
+// app/api/papers/route.ts  (POST handler)
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -20,6 +21,7 @@ function buildMeta(paper: ExamPaper) {
     language: paper.metadata.language,
     columns: (paper.metadata.columns ?? 2) as 1 | 2 | 3,
     fontSize: (paper.metadata.fontSize ?? 11) as number,
+    headerTemplate: paper.metadata.headerTemplate ?? 'classic',
   };
 }
 
@@ -52,9 +54,7 @@ export async function POST(req: NextRequest) {
   const projectCount = await getWorkspaceProjectCount(db, ownerUsername);
   if (projectCount >= MAX_PROJECTS_PER_OWNER) {
     return NextResponse.json(
-      {
-        error: `You can only create up to ${MAX_PROJECTS_PER_OWNER} projects.`,
-      },
+      { error: `You can only create up to ${MAX_PROJECTS_PER_OWNER} projects.` },
       { status: 409 },
     );
   }

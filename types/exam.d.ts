@@ -26,6 +26,31 @@ export interface ExamMetadata {
   /** Layout preference persisted with the paper: 1 | 2 | 3 columns. Default 2. */
   columns?: 1 | 2 | 3;
   fontSize?: number;
+  /** Which header/footer template to use. Default: 'classic'. */
+  headerTemplate?: 'classic' | 'coaching' | 'minimal';
+
+  /**
+   * Coaching template only.
+   * The number shown inside the circle badge (e.g. "02").
+   * Falls back to setCode, then '01'.
+   */
+  coachingSetNumber?: string;
+
+  /**
+   * Coaching template only.
+   * Text shown in the brand subbar at the bottom of the header title box.
+   * e.g. "Your Brand | बिहार पुलिस मॉडल प्रैक्टिस सेट"
+   */
+  footerBrand?: string;
+
+  /**
+   * Coaching template only.
+   * Text shown in the dark bar at the absolute bottom of every page.
+   */
+  footerBrandText?: string;
+
+  /** Coaching template only. Hex color for badge block + footer bars. Default '#1a1a1a'. */
+  footerBrandColor?: string;
 }
 
 export interface QuestionOption {
@@ -51,24 +76,28 @@ export interface ImportFlag {
 
 export interface Question {
   id: string;
-  type: 'mcq' | 'short' | 'long';
+  type: 'mcq' | 'short' | 'long' | 'assertion_reason';
   subject: 'general' | 'mathematics' | 'reasoning' | 'english' | 'hindi' | 'gk';
   textEn: string;
   textHi?: string;
-  hasMath?: boolean; // whether textEn/textHi contain LaTeX segments ($...$)
-  options?: QuestionOption[]; // for mcq
+  hasMath?: boolean;
+  options?: QuestionOption[]; // for mcq AND assertion_reason (the A/B/C/D "codes")
   marks?: number;
-  answerSpaceLines?: number; // for short/long answer blank space
-  imageDataUrl?: string; // optional question image (diagram etc.)
+  answerSpaceLines?: number;
+  imageDataUrl?: string;
 
-  // Answer key fields — populated by bulk import or filled manually.
-  correctAnswerLetter?: string; // "A" | "B" | "C" | "D" ... mirrors options[].isCorrect
+  // Assertion-Reason specific
+  assertionEn?: string;
+  assertionHi?: string;
+  reasonEn?: string;
+  reasonHi?: string;
+
+  correctAnswerLetter?: string;
   solutionEn?: string;
   solutionHi?: string;
 
-  // Bulk import bookkeeping — not rendered on the paper, used by the review UI.
   importFlags?: ImportFlag[];
-  importSourceIndex?: number; // original 1-based number in the pasted text, for traceability
+  importSourceIndex?: number;
 }
 
 export interface ExamSection {

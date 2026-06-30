@@ -96,17 +96,73 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
           </span>
           <div className="flex-1">
             {showEn && question.textEn && (
-              <p>
+              <div style={{ whiteSpace: 'pre-line' }}>
                 {question.hasMath ? <MathText text={question.textEn} /> : question.textEn}
                 <span className="ml-1 font-medium" style={{ color: PREVIEW_COLORS.secondaryText }}>
                   [{marks}]
                 </span>
-              </p>
+              </div>
             )}
             {showHi && question.textHi && (
-              <p className="font-devanagari" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+              <div
+                className="font-devanagari"
+                style={{ whiteSpace: 'pre-line', color: PREVIEW_COLORS.quaternaryText }}
+              >
                 {question.hasMath ? <MathText text={question.textHi} /> : question.textHi}
-              </p>
+              </div>
+            )}
+
+            {question.type === 'assertion_reason' && (
+              <div className="mt-1 flex flex-col gap-0.5">
+                {(question.assertionEn || question.assertionHi) && (
+                  <p>
+                    <span className="font-semibold">Assertion (A): </span>
+                    {showEn &&
+                      question.assertionEn &&
+                      (question.hasMath ? (
+                        <MathText text={question.assertionEn} />
+                      ) : (
+                        question.assertionEn
+                      ))}
+                    {showHi && question.assertionHi && (
+                      <span
+                        className="font-devanagari block"
+                        style={{ color: PREVIEW_COLORS.quaternaryText }}
+                      >
+                        {question.hasMath ? (
+                          <MathText text={question.assertionHi} />
+                        ) : (
+                          question.assertionHi
+                        )}
+                      </span>
+                    )}
+                  </p>
+                )}
+                {(question.reasonEn || question.reasonHi) && (
+                  <p>
+                    <span className="font-semibold">Reason (R): </span>
+                    {showEn &&
+                      question.reasonEn &&
+                      (question.hasMath ? (
+                        <MathText text={question.reasonEn} />
+                      ) : (
+                        question.reasonEn
+                      ))}
+                    {showHi && question.reasonHi && (
+                      <span
+                        className="font-devanagari block"
+                        style={{ color: PREVIEW_COLORS.quaternaryText }}
+                      >
+                        {question.hasMath ? (
+                          <MathText text={question.reasonHi} />
+                        ) : (
+                          question.reasonHi
+                        )}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
             )}
 
             {question.imageDataUrl && (
@@ -114,35 +170,36 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
               <img src={question.imageDataUrl} alt="" className="my-1 max-h-24 object-contain" />
             )}
 
-            {question.type === 'mcq' && question.options && (
-              <div className={`mt-1 grid ${optionGrid} gap-y-0.5`}>
-                {question.options.map((opt, i) => (
-                  <div key={opt.id} className="flex gap-1">
-                    <span className="font-semibold" style={{ fontSize: `${oSize}px` }}>
-                      ({String.fromCharCode(97 + i)})
-                    </span>
-                    <div style={{ fontSize: `${oSize}px` }}>
-                      {showEn && (
-                        <span>
-                          {question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}
-                        </span>
-                      )}
-                      {showHi && opt.textHi && (
-                        <span
-                          className="font-devanagari block"
-                          style={{
-                            color: PREVIEW_COLORS.tertiaryText,
-                            fontSize: `${oSize - 0.5}px`,
-                          }}
-                        >
-                          {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
-                        </span>
-                      )}
+            {(question.type === 'mcq' || question.type === 'assertion_reason') &&
+              question.options && (
+                <div className={`mt-1 grid ${optionGrid} gap-y-0.5`}>
+                  {question.options.map((opt, i) => (
+                    <div key={opt.id} className="flex gap-1">
+                      <span className="font-semibold" style={{ fontSize: `${oSize}px` }}>
+                        ({String.fromCharCode(97 + i)})
+                      </span>
+                      <div style={{ fontSize: `${oSize}px` }}>
+                        {showEn && (
+                          <span>
+                            {question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}
+                          </span>
+                        )}
+                        {showHi && opt.textHi && (
+                          <span
+                            className="font-devanagari block"
+                            style={{
+                              color: PREVIEW_COLORS.tertiaryText,
+                              fontSize: `${oSize - 0.5}px`,
+                            }}
+                          >
+                            {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
             {(question.type === 'short' || question.type === 'long') && (
               <div className="mt-1.5 flex flex-col gap-2.5">

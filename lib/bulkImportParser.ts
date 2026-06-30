@@ -55,6 +55,18 @@ const ANSWER_RE = /^\s*(?:Answer|Ans|उत्तर)\s*[:\-]\s*\(?([A-Za-z])\)?
 // "Solution: ..." / "Sol: ..." / "व्याख्या:" / "हल:" — captures the rest of the line as the first solution line.
 const SOLUTION_START_RE = /^\s*(?:Solution|Sol|व्याख्या|हल|स्पष्टीकरण)\s*[:\-]\s*(.*)$/iu;
 
+// "Assertion (A): ..." / "अभिकथन A: ..." / "अभिकथन: ..."
+// "Assertion (A): ..." / "अभिकथन A: ..." / "अभिकथन: ..." / "कथन A: ..."
+const ASSERTION_RE = /^\s*(?:Assertion\s*\(?A\)?|अभिकथन\s*A?|कथन\s*A)\s*[:\-]\s*(.*)$/iu;
+
+// "Reason (R): ..." / "कारण R: ..." / "कारण: ..."
+const REASON_RE = /^\s*(?:Reason\s*\(?R\)?|कारण\s*R?)\s*[:\-]\s*(.*)$/iu;
+
+// The "choose from the codes below" instruction line that follows Assertion/Reason
+// — once we see this, subsequent text belongs back to the question stem, not the reason.
+const CODE_HINT_RE =
+  /(कूट|कूटों|codes?\s+given\s+below|select\s+the\s+correct\s+answer|सही उत्तर चुनिए)/iu;
+
 // Heuristic cues that a question or option is image-based rather than text-based.
 const IMAGE_CUE_RE =
   /(see\s+the\s+figure|given\s+figure|following\s+figure|diagram\s+below|image\s+below|refer\s+to\s+the\s+image|चित्र\s+में|दिए\s+गए\s+चित्र|निम्नलिखित\s+चित्र|आकृति\s+में|नीचे\s+दिए\s+गए\s+चित्र)/iu;
@@ -70,12 +82,15 @@ const EMPTY_OR_IMAGE_OPTION_RE = /^\s*(image|img|चित्र|figure|आक�
 const IMAGE_SENTINEL_RE = /\[\[IMG:(\d+)\]\]/g;
 
 interface RawQuestionBlock {
-  sourceIndex: number; // 1-based number as it appeared in the pasted text
+  sourceIndex: number;
   questionLines: string[];
+  assertionLines: string[];
+  reasonLines: string[];
+  isAssertionReason: boolean;
   optionLines: { letter: string; text: string }[];
   answerLetter?: string;
   solutionLines: string[];
-  raw: string; // full original block, for the "view raw" affordance in review UI
+  raw: string;
 }
 
 // ---- Stage 1: split raw text into per-question blocks ------------------
@@ -92,6 +107,7 @@ function splitIntoBlocks(text: string): {
   let current: RawQuestionBlock | null = null;
   // Which section of the current question we're accumulating into.
   let mode: 'question' | 'options' | 'solution' = 'question';
+  let qSubMode: 'stem' | 'assertion' | 'reason' = 'stem';
   let lastSourceIndex = 0; // tracks the most recently started question number, to validate sequencing
 
   function pushCurrent() {
@@ -126,15 +142,24 @@ function splitIntoBlocks(text: string): {
 
     if (looksLikeNewQuestion && qMatch && candidateNumber !== null) {
       pushCurrent();
+
+      const remainder = qMatch[2];
+      const assertionMatch = ASSERTION_RE.exec(remainder);
+      const reasonMatch = !assertionMatch ? REASON_RE.exec(remainder) : null;
+
       current = {
         sourceIndex: candidateNumber,
-        questionLines: [qMatch[2]],
+        questionLines: assertionMatch || reasonMatch ? [] : [remainder],
+        assertionLines: assertionMatch ? [assertionMatch[1]] : [],
+        reasonLines: reasonMatch ? [reasonMatch[1]] : [],
+        isAssertionReason: Boolean(assertionMatch || reasonMatch),
         optionLines: [],
         solutionLines: [],
         raw: line,
       };
       lastSourceIndex = candidateNumber;
       mode = 'question';
+      qSubMode = assertionMatch ? 'assertion' : reasonMatch ? 'reason' : 'stem';
       continue;
     }
 
@@ -181,6 +206,40 @@ function splitIntoBlocks(text: string): {
     // question stem, or a numbered sub-statement (1/2/3 inside the stem,
     // as in the DPSP example) — both belong to questionLines either way.
     if (mode === 'question') {
+      const assertionMatch = ASSERTION_RE.exec(line);
+      if (assertionMatch) {
+        current.isAssertionReason = true;
+        qSubMode = 'assertion';
+        current.assertionLines.push(assertionMatch[1]);
+        continue;
+      }
+
+      const reasonMatch = REASON_RE.exec(line);
+      if (reasonMatch) {
+        current.isAssertionReason = true;
+        qSubMode = 'reason';
+        current.reasonLines.push(reasonMatch[1]);
+        continue;
+      }
+
+      // Instruction line ("नीचे दिए गए कूट...") after Reason — belongs to the
+      // stem/intro, not the reason text, and also ends the reason sub-mode.
+      if (CODE_HINT_RE.test(line)) {
+        qSubMode = 'stem';
+        current.questionLines.push(line);
+        continue;
+      }
+
+      // Wrapped continuation lines of an in-progress assertion/reason block.
+      if (qSubMode === 'assertion') {
+        current.assertionLines.push(line);
+        continue;
+      }
+      if (qSubMode === 'reason') {
+        current.reasonLines.push(line);
+        continue;
+      }
+
       current.questionLines.push(line);
       continue;
     }
@@ -205,15 +264,9 @@ function splitIntoBlocks(text: string): {
 // ---- Stage 2: build Question objects + flags from each block ----------
 
 function detectLanguageSplit(lines: string[]): { en: string; hi: string } {
-  // Many pasted papers are Hindi-only (as in the sample data) or
-  // English-only, not interleaved per-line. We don't try to guess a
-  // per-line bilingual split (too fragile); instead the whole block goes
-  // into whichever language it's predominantly written in, and the other
-  // field is left empty for the user to fill in if they want bilingual
-  // output.
-  const joined = lines.join(' ').trim();
+  const joined = lines.join('\n').trim();
   const devanagariChars = (joined.match(/[\u0900-\u097F]/gu) ?? []).length;
-  const isHindi = devanagariChars > joined.length * 0.15; // >15% Devanagari chars → treat as Hindi block
+  const isHindi = devanagariChars > joined.length * 0.15;
   return isHindi ? { en: '', hi: joined } : { en: joined, hi: '' };
 }
 
@@ -247,6 +300,38 @@ function buildQuestion(
   // (sentinels are ASCII bracket tokens and would otherwise dilute the
   // Devanagari-ratio check on short Hindi questions).
   const questionLinesNoSentinels: string[] = [];
+
+  // Assertion/Reason text — same sentinel-stripping treatment as the stem,
+  // in case a docx import embedded a figure inside the assertion or reason.
+  const assertionLinesClean: string[] = [];
+  for (const line of block.assertionLines) {
+    assertionLinesClean.push(extractImageSentinels(line).cleaned);
+  }
+  const reasonLinesClean: string[] = [];
+  for (const line of block.reasonLines) {
+    reasonLinesClean.push(extractImageSentinels(line).cleaned);
+  }
+
+  const { en: assertionEn, hi: assertionHi } = assertionLinesClean.length
+    ? detectLanguageSplit(assertionLinesClean)
+    : { en: '', hi: '' };
+  const { en: reasonEn, hi: reasonHi } = reasonLinesClean.length
+    ? detectLanguageSplit(reasonLinesClean)
+    : { en: '', hi: '' };
+
+  if (block.isAssertionReason && !assertionEn && !assertionHi) {
+    flags.push({
+      type: 'low_confidence',
+      message: 'Assertion-Reason question detected but Assertion (A) text could not be parsed.',
+    });
+  }
+  if (block.isAssertionReason && !reasonEn && !reasonHi) {
+    flags.push({
+      type: 'low_confidence',
+      message: 'Assertion-Reason question detected but Reason (R) text could not be parsed.',
+    });
+  }
+
   const questionImageIndices: number[] = [];
   for (const line of block.questionLines) {
     const { cleaned, indices } = extractImageSentinels(line);
@@ -255,7 +340,7 @@ function buildQuestion(
   }
 
   const { en: textEn, hi: textHi } = detectLanguageSplit(questionLinesNoSentinels);
-  const fullQuestionText = (textEn + ' ' + textHi).trim();
+  const fullQuestionText = (textEn + ' ' + textHi).replace(/\n/g, ' ').trim();
 
   const isMcq = block.optionLines.length > 0;
 
@@ -355,7 +440,7 @@ function buildQuestion(
 
   return {
     id: crypto.randomUUID(),
-    type: isMcq ? 'mcq' : 'short',
+    type: block.isAssertionReason ? 'assertion_reason' : isMcq ? 'mcq' : 'short',
     subject: defaultSubject,
     textEn,
     textHi,
@@ -365,6 +450,10 @@ function buildQuestion(
     marks: 1,
     answerSpaceLines: isMcq ? undefined : 3,
     correctAnswerLetter: block.answerLetter,
+    assertionEn: assertionEn || undefined,
+    assertionHi: assertionHi || undefined,
+    reasonEn: reasonEn || undefined,
+    reasonHi: reasonHi || undefined,
     solutionEn: solutionEn || undefined,
     solutionHi: solutionHi || undefined,
     importFlags: flags.length > 0 ? flags : undefined,
