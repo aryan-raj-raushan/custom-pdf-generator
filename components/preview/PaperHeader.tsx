@@ -41,6 +41,7 @@ function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
               style={{ borderColor: PREVIEW_COLORS.pageText }}
             >
               SET — {metadata.setCode}
+              {metadata.bookletSeries && ` · ${metadata.bookletSeries}`}
             </p>
           )}
         </div>
@@ -151,9 +152,14 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
               <span style={{ fontFamily: 'var(--font-devanagari, inherit)' }}>
                 {headerBrandText}
               </span>
-              {metadata.examCode && (
-                <span className="ml-3 shrink-0 font-mono tracking-wide">{metadata.examCode}</span>
-              )}
+              <span className="ml-3 flex shrink-0 items-center gap-2">
+                {metadata.bookletSeries && (
+                  <span className="tracking-wide">{metadata.bookletSeries}</span>
+                )}
+                {metadata.examCode && (
+                  <span className="font-mono tracking-wide">{metadata.examCode}</span>
+                )}
+              </span>
             </div>
           )}
         </div>
@@ -170,6 +176,11 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
           )}
           {showHi && metadata.organisationHi && (
             <span className="font-devanagari ml-1">{metadata.organisationHi}</span>
+          )}
+          {metadata.bookletSeries && (
+            <span className="ml-2 text-[9px] font-semibold uppercase tracking-widest">
+              · {metadata.bookletSeries}
+            </span>
           )}
         </span>
         <span className="flex items-center gap-3">
@@ -417,7 +428,8 @@ export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadat
   const showHi = metadata.language !== 'en';
   const showEn = metadata.language !== 'hi';
 
-  if (metadata.generalInstructions.length === 0) return null;
+  const enabled = metadata.generalInstructionsEnabled ?? true;
+  if (!enabled || metadata.generalInstructions.length === 0) return null;
 
   return (
     <div

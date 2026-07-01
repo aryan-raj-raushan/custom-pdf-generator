@@ -1,9 +1,9 @@
 // components/metadata/MetadataForm.tsx
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Upload, X, Droplets } from 'lucide-react';
+import { Plus, Trash2, Upload, X, Languages } from 'lucide-react';
 import { ExamMetadata } from '@/types/exam';
 import { Field, Input, Select, TextArea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,20 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const watermarkImageRef = useRef<HTMLInputElement>(null);
   const coverImageRef = useRef<HTMLInputElement>(null);
+
+  // Tracks which instruction rows have the Hindi field expanded.
+  // Initialised lazily per-row: on if hindi text already exists or paper isn't English-only.
+  const [hindiRowsOpen, setHindiRowsOpen] = useState<Record<number, boolean>>({});
+
+  function isHindiOpen(index: number) {
+    if (index in hindiRowsOpen) return hindiRowsOpen[index];
+    const hasText = !!metadata.generalInstructionsHi?.[index]?.trim();
+    return hasText || metadata.language !== 'en';
+  }
+
+  function setHindiOpen(index: number, open: boolean) {
+    setHindiRowsOpen((prev) => ({ ...prev, [index]: open }));
+  }
 
   function handleCoverImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -42,20 +56,70 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     update(key, list);
   }
 
-  function addInstruction() {
-    update('generalInstructions', [...metadata.generalInstructions, '']);
-    update('generalInstructionsHi', [...(metadata.generalInstructionsHi ?? []), '']);
+  const rowKeysRef = useRef<string[]>([]);
+
+  function getRowKey(index: number) {
+    if (!rowKeysRef.current[index]) {
+      rowKeysRef.current[index] =
+        `row-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
+    }
+    return rowKeysRef.current[index];
   }
 
+  function addInstruction() {
+    const nextEn = [...metadata.generalInstructions, ''];
+    const nextHi = [...(metadata.generalInstructionsHi ?? []), ''];
+
+    onChange({
+      ...metadata,
+      generalInstructions: nextEn,
+      generalInstructionsHi: nextHi,
+    });
+
+    rowKeysRef.current = [
+      ...rowKeysRef.current,
+      `row-${Date.now()}-${rowKeysRef.current.length}-${Math.random().toString(36).slice(2)}`,
+    ];
+  }
+
+  // Removes the whole instruction row (English + Hindi together).
   function removeInstruction(index: number) {
-    update(
-      'generalInstructions',
-      metadata.generalInstructions.filter((_, i) => i !== index),
-    );
-    update(
-      'generalInstructionsHi',
-      (metadata.generalInstructionsHi ?? []).filter((_, i) => i !== index),
-    );
+    const nextEn = metadata.generalInstructions.filter((_, i) => i !== index);
+    const nextHi = (metadata.generalInstructionsHi ?? []).filter((_, i) => i !== index);
+    rowKeysRef.current = rowKeysRef.current.filter((_, i) => i !== index);
+
+    // Reindex the open/closed Hindi-toggle map to match the new array positions
+    setHindiRowsOpen((prev) => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < index) next[i] = v;
+        else if (i > index) next[i - 1] = v;
+      });
+      return next;
+    });
+
+    onChange({
+      ...metadata,
+      generalInstructions: nextEn,
+      generalInstructionsHi: nextHi,
+    });
+  }
+
+  // Clears just the Hindi text for a row and collapses the field — the
+  // English instruction and the row itself are left untouched.
+  function clearHindiInstruction(index: number) {
+    updateInstruction(index, '', 'hi');
+    setHindiOpen(index, false);
+  }
+
+  function toggleHindiRow(index: number) {
+    const nextOpen = !isHindiOpen(index);
+    if (!nextOpen) {
+      // Turning the toggle off clears the Hindi text for that row.
+      updateInstruction(index, '', 'hi');
+    }
+    setHindiOpen(index, nextOpen);
   }
 
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -363,47 +427,108 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       <section className="flex flex-col gap-3 border-t border-stone-100 pt-5">
         <div className="flex items-center justify-between">
           <SectionLabel>General instructions</SectionLabel>
-          <Button size="sm" variant="ghost" onClick={addInstruction}>
-            <Plus size={14} /> Add line
-          </Button>
+          <div className="flex items-center gap-2">
+            <Toggle
+              label=""
+              checked={metadata.generalInstructionsEnabled ?? true}
+              onChange={(v) => update('generalInstructionsEnabled', v)}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={addInstruction}
+              disabled={!(metadata.generalInstructionsEnabled ?? true)}
+            >
+              <Plus size={14} /> Add line
+            </Button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {metadata.generalInstructions.map((instr, i) => (
-            <div
-              key={i}
-              className="flex flex-col gap-1.5 rounded-md border border-stone-100 bg-stone-50/60 p-2.5"
+        <AnimatePresence initial={false}>
+          {(metadata.generalInstructionsEnabled ?? true) && (
+            <motion.div
+              key="instructions-body"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
             >
-              <div className="flex items-start gap-2">
-                <span className="mt-2 w-4 shrink-0 text-xs text-stone-400">{i + 1}.</span>
-                <TextArea
-                  value={instr}
-                  onChange={(e) => updateInstruction(i, e.target.value, 'en')}
-                  placeholder="Instruction in English"
-                  rows={2}
-                  className="flex-1 text-[13px]"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeInstruction(i)}
-                  className="mt-2 shrink-0 text-stone-300 hover:text-red-500"
-                >
-                  <Trash2 size={14} />
-                </button>
+              <div className="flex flex-col gap-3">
+                {metadata.generalInstructions.map((instr, i) => {
+                  const hindiOpen = isHindiOpen(i);
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-col gap-1.5 rounded-md border border-stone-100 bg-stone-50/60 p-2.5"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="mt-2 w-4 shrink-0 text-xs text-stone-400">{i + 1}.</span>
+                        <TextArea
+                          value={instr}
+                          onChange={(e) => updateInstruction(i, e.target.value, 'en')}
+                          placeholder="Instruction in English"
+                          rows={2}
+                          className="flex-1 text-[13px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleHindiRow(i)}
+                          title={hindiOpen ? 'Remove Hindi translation' : 'Add Hindi translation'}
+                          className={`mt-2 flex shrink-0 items-center justify-center rounded p-1 transition-colors ${
+                            hindiOpen
+                              ? 'bg-stone-900 text-white hover:bg-stone-700'
+                              : 'text-stone-300 hover:bg-stone-200 hover:text-stone-600'
+                          }`}
+                        >
+                          <Languages size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeInstruction(i)}
+                          title="Delete instruction"
+                          className="mt-2 shrink-0 text-stone-300 hover:text-red-500"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <AnimatePresence initial={false}>
+                        {hindiOpen && (
+                          <motion.div
+                            key="hindi-field"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="ml-6 flex items-start gap-2 overflow-hidden"
+                          >
+                            <TextArea
+                              value={metadata.generalInstructionsHi?.[i] ?? ''}
+                              onChange={(e) => updateInstruction(i, e.target.value, 'hi')}
+                              placeholder="हिंदी में निर्देश"
+                              rows={2}
+                              className="flex-1 text-[13px]"
+                              style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => clearHindiInstruction(i)}
+                              title="Clear Hindi text"
+                              className="mt-2 shrink-0 text-stone-300 hover:text-red-500"
+                            >
+                              <X size={14} />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
               </div>
-              {metadata.language !== 'en' && (
-                <TextArea
-                  value={metadata.generalInstructionsHi?.[i] ?? ''}
-                  onChange={(e) => updateInstruction(i, e.target.value, 'hi')}
-                  placeholder="हिंदी में निर्देश"
-                  rows={2}
-                  className="ml-6 flex-1 text-[13px]"
-                  style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* ── Watermark ─────────────────────────────────── */}
@@ -436,7 +561,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               className="overflow-hidden"
             >
               <div className="flex flex-col gap-3 rounded-lg border border-stone-100 bg-stone-50/60 p-3">
-                {/* Type toggle */}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -462,7 +586,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   </button>
                 </div>
 
-                {/* Text mode */}
                 {(metadata.watermark?.type ?? 'text') === 'text' && (
                   <div>
                     <label className="mb-1 block text-[11px] font-medium text-stone-500">
@@ -486,7 +609,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   </div>
                 )}
 
-                {/* Image mode */}
                 {metadata.watermark?.type === 'image' && (
                   <div>
                     <label className="mb-1 block text-[11px] font-medium text-stone-500">
@@ -542,7 +664,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   </div>
                 )}
 
-                {/* Opacity slider */}
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
                     <label className="text-[11px] font-medium text-stone-500">Opacity</label>
@@ -568,7 +689,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                     />
                     <span className="text-[10px] text-stone-400">Bold</span>
                   </div>
-                  {/* Live preview strip */}
                   <div className="mt-2 flex items-center justify-center rounded-md border border-stone-100 bg-white py-3">
                     <span
                       className="text-[18px] font-black uppercase tracking-widest text-stone-900"

@@ -1,3 +1,9 @@
+export interface GeneralInstruction {
+  id: string;
+  en: string;
+  hi: string;
+}
+
 export interface ExamMetadata {
   examTitle: string;
   examTitleHi?: string;
@@ -13,6 +19,7 @@ export interface ExamMetadata {
   candidateNameLabel?: boolean; // show Candidate Name line
   setCode?: string; // Set A / Set B etc.
   bookletSeries?: string; // Booklet Series e.g. "A"
+  generalInstructionsEnabled?: boolean;
   generalInstructions: string[]; // English instructions
   generalInstructionsHi?: string[]; // Hindi instructions
   negativeMarking?: {
