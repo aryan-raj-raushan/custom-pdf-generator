@@ -55,8 +55,10 @@ const MEASURE_WIDTHS: Record<ColumnCount, number> = {
 };
 
 export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
-  ({ paper, highlightedQuestionId, columns = 2, fontSize = FONT_SIZE_DEFAULT, active = true }, ref) => {
-
+  (
+    { paper, highlightedQuestionId, columns = 2, fontSize = FONT_SIZE_DEFAULT, active = true },
+    ref,
+  ) => {
     const measureRef = useRef<HTMLDivElement>(null!);
     const rootRef = useRef<HTMLDivElement>(null!);
 

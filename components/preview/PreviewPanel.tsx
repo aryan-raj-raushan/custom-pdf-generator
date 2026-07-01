@@ -116,16 +116,18 @@ export function PreviewPanel({
           <button
             type="button"
             onClick={() => setMode('paper')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === 'paper' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
-              }`}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'paper' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+            }`}
           >
             <FileText size={13} /> Question paper
           </button>
           <button
             type="button"
             onClick={() => setMode('answerKey')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === 'answerKey' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
-              }`}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'answerKey' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+            }`}
           >
             <KeyRound size={13} /> Answer key
           </button>
@@ -144,10 +146,11 @@ export function PreviewPanel({
                   type="button"
                   title={opt.title}
                   onClick={() => handleColumnsChange(opt.value)}
-                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${columns === opt.value
-                    ? 'bg-stone-900 text-white'
-                    : 'bg-white text-stone-500 hover:bg-stone-50'
-                    }`}
+                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${
+                    columns === opt.value
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-white text-stone-500 hover:bg-stone-50'
+                  }`}
                 >
                   {opt.label}
                 </button>

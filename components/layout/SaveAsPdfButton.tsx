@@ -33,6 +33,7 @@ export function SaveAsPdfButton({
     try {
       await exportPreviewToPdf(previewRef.current, {
         fileName: fileName || 'question-paper',
+        // @ts-expect-error ignore
         onProgress: setProgress,
         pageClassName,
       });

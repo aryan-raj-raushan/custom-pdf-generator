@@ -86,11 +86,11 @@ export function createEmptyQuestion(
     options:
       type === 'mcq'
         ? [
-          { id: crypto.randomUUID(), textEn: '', textHi: '' },
-          { id: crypto.randomUUID(), textEn: '', textHi: '' },
-          { id: crypto.randomUUID(), textEn: '', textHi: '' },
-          { id: crypto.randomUUID(), textEn: '', textHi: '' },
-        ]
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+            { id: crypto.randomUUID(), textEn: '', textHi: '' },
+          ]
         : undefined,
     marks: 1,
     answerSpaceLines: type === 'short' ? 3 : type === 'long' ? 8 : undefined,

@@ -36,7 +36,11 @@ export function ExportProgressOverlay({ progress }: Readonly<ExportProgressOverl
 
   const { phase, pagesDone, pagesTotal, estimatedRemainingMs } = progress;
   const pct =
-    pagesTotal > 0 ? Math.min(100, Math.round((pagesDone / pagesTotal) * 100)) : phase === 'building' ? 100 : 0;
+    pagesTotal > 0
+      ? Math.min(100, Math.round((pagesDone / pagesTotal) * 100))
+      : phase === 'building'
+        ? 100
+        : 0;
   const remainingLabel = formatSeconds(estimatedRemainingMs);
 
   return (

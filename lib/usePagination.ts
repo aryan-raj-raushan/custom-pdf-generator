@@ -226,6 +226,7 @@ export function useOverflowCorrection(
   const measuredKey = measuredPages.map((p) => p.join(',')).join('|');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPages(measuredPages);
     passRef.current = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
