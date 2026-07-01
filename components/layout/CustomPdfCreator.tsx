@@ -27,6 +27,7 @@ import { SaveAsPdfButton } from '@/components/layout/SaveAsPdfButton';
 import { BulkImportModal } from '@/components/import/BulkImportModal';
 import { ImportIssuesPanel, ImportSummaryBadge } from '@/components/import/ImportIssuesPanel';
 import { parseBulkImportText } from '@/lib/bulkImportParser';
+import ExportPdfDropdown from './ExportPdfDropdown';
 
 export const DEFAULT_INSTRUCTIONS_EN = [
   'This question paper contains multiple choice questions (MCQs), short answer and long answer type questions.',
@@ -85,11 +86,11 @@ export function createEmptyQuestion(
     options:
       type === 'mcq'
         ? [
-            { id: crypto.randomUUID(), textEn: '', textHi: '' },
-            { id: crypto.randomUUID(), textEn: '', textHi: '' },
-            { id: crypto.randomUUID(), textEn: '', textHi: '' },
-            { id: crypto.randomUUID(), textEn: '', textHi: '' },
-          ]
+          { id: crypto.randomUUID(), textEn: '', textHi: '' },
+          { id: crypto.randomUUID(), textEn: '', textHi: '' },
+          { id: crypto.randomUUID(), textEn: '', textHi: '' },
+          { id: crypto.randomUUID(), textEn: '', textHi: '' },
+        ]
         : undefined,
     marks: 1,
     answerSpaceLines: type === 'short' ? 3 : type === 'long' ? 8 : undefined,
@@ -303,22 +304,11 @@ export function CustomPdfCreator({
             </Button>
           ) : null}
 
-          {/* Export answer key — always visible */}
-          <SaveAsPdfButton
-            previewRef={answerKeyRef}
-            fileName={`${paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}-answer-key`}
-            pageClassName="answer-key-page"
-            label="Export answer key"
-            variant="secondary"
-          />
-
-          {/* Export as PDF — always visible */}
-          <SaveAsPdfButton
+          {/* Export — combined dropdown replaces the two separate buttons */}
+          <ExportPdfDropdown
             previewRef={previewRef}
+            answerKeyRef={answerKeyRef}
             fileName={paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}
-            pageClassName="pdf-page"
-            label="Export as PDF"
-            variant="secondary"
           />
 
           {/* Save — edit only */}

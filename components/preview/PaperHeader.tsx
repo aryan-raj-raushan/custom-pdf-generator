@@ -328,6 +328,7 @@ export function CoachingPageFooter({
 
   return (
     <div
+      data-page-footer="true"
       className="absolute bottom-0 left-0 right-0 flex items-stretch overflow-hidden border-t-2"
       style={{ borderColor: brandColor }}
     >

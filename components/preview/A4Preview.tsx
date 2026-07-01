@@ -6,7 +6,7 @@ import { ExamPaper, Question } from '@/types/exam';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { PaperHeader, InstructionsBlock, CoachingPageFooter } from './PaperHeader';
 import { QuestionBlock } from './QuestionBlock';
-import { useAutoPaginate } from '@/lib/usePagination';
+import { useAutoPaginate, useOverflowCorrection } from '@/lib/usePagination';
 import { FONT_SIZE_DEFAULT } from './PreviewPanel';
 
 export type ColumnCount = 1 | 2 | 3;
@@ -25,6 +25,7 @@ interface A4PreviewProps {
   highlightedQuestionId?: string | null;
   columns?: ColumnCount;
   fontSize?: number;
+  active?: boolean;
 }
 
 function getReservedFirstPage(columns: ColumnCount, fontSize: number): number {
@@ -34,7 +35,7 @@ function getReservedFirstPage(columns: ColumnCount, fontSize: number): number {
 }
 
 function getReservedOtherPage(columns: ColumnCount): number {
-  const base: Record<ColumnCount, number> = { 1: 95, 2: 90, 3: 85 };
+  const base: Record<ColumnCount, number> = { 1: 130, 2: 125, 3: 120 };
   return base[columns];
 }
 
@@ -54,8 +55,20 @@ const MEASURE_WIDTHS: Record<ColumnCount, number> = {
 };
 
 export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
-  ({ paper, highlightedQuestionId, columns = 2, fontSize = FONT_SIZE_DEFAULT }, ref) => {
+  ({ paper, highlightedQuestionId, columns = 2, fontSize = FONT_SIZE_DEFAULT, active = true }, ref) => {
+
     const measureRef = useRef<HTMLDivElement>(null!);
+    const rootRef = useRef<HTMLDivElement>(null!);
+
+    // Merge the forwarded ref (used by the export pipeline) with a local
+    // ref (used internally for the overflow-correction pass) without
+    // needing an extra dependency.
+    const setRootRef = (node: HTMLDivElement | null) => {
+      rootRef.current = node as HTMLDivElement;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    };
+
     const isCoaching = (paper.metadata.headerTemplate ?? 'classic') === 'coaching';
 
     const flatQuestions: FlatQuestion[] = useMemo(() => {
@@ -79,28 +92,56 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
 
     const blockIds = flatQuestions.map((f) => f.blockId);
 
-    // Add coaching footer height to reserved space so questions don't overlap it
-    const reservedFirst =
-      getReservedFirstPage(columns, fontSize) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
-    const reservedOther = getReservedOtherPage(columns) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
-
-    const pages = useAutoPaginate(blockIds, measureRef, {
-      reservedFirstPagePx: reservedFirst,
-      reservedOtherPagePx: reservedOther,
-      columns,
-      fontSize,
-    });
-
     const byId = useMemo(() => {
       const m = new Map<string, FlatQuestion>();
       flatQuestions.forEach((f) => m.set(f.blockId, f));
       return m;
     }, [flatQuestions]);
 
+    // Add coaching footer height to reserved space so questions don't overlap it
+    const reservedFirst =
+      getReservedFirstPage(columns, fontSize) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
+    const reservedOther = getReservedOtherPage(columns) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
+
+    const SECTION_HEADER_EXTRA_PX = 34;
+    const firstQuestionIsFirst = flatQuestions[0]?.blockId;
+    const getExtraHeightBefore = (id: string) => {
+      const f = byId.get(id);
+      if (!f) return 0;
+      if (f.isFirstInSection && id !== firstQuestionIsFirst) {
+        return SECTION_HEADER_EXTRA_PX;
+      }
+      return 0;
+    };
+
+    const getForcesNewRow = (id: string) => {
+      const f = byId.get(id);
+      if (!f) return false;
+      return f.isFirstInSection && id !== firstQuestionIsFirst;
+    };
+
+    const measuredPages = useAutoPaginate(blockIds, measureRef, {
+      reservedFirstPagePx: reservedFirst,
+      reservedOtherPagePx: reservedOther,
+      columns,
+      fontSize,
+      active,
+      extraHeightBefore: getExtraHeightBefore,
+      forcesNewRow: getForcesNewRow,
+    });
+
+    // Safety-net pass: after real pages render, fix any question block that
+    // still visually overlaps the footer by bumping it to the next page.
+    const pages = useOverflowCorrection(measuredPages, rootRef, {
+      pageSelector: '[data-content-page="true"]',
+      footerSelector: '[data-page-footer="true"]',
+      blockAttr: 'data-question-id',
+    });
+
     const gridClass = GRID_CLASS[columns];
 
     return (
-      <div ref={ref} className="flex flex-col items-center gap-6">
+      <div ref={setRootRef} className="flex flex-col items-center gap-6">
         {/* Hidden measurement pass */}
         <div style={{ position: 'relative', overflow: 'hidden', height: 0, width: 0 }}>
           <div
@@ -345,9 +386,11 @@ function Page({
   return (
     <div
       className="pdf-page relative"
+      data-content-page="true"
       style={{
         width: 794,
-        minHeight: 1123,
+        height: 1123,
+        overflow: 'hidden',
         // Extra bottom padding for coaching so content never hides behind the footer bar
         padding: isCoaching ? '34px 38px 52px' : '34px 38px 44px',
         backgroundColor: PREVIEW_COLORS.pageBackground,
@@ -363,6 +406,7 @@ function Page({
         <CoachingPageFooter metadata={metadata} pageNumber={pageNumber} totalPages={totalPages} />
       ) : (
         <div
+          data-page-footer="true"
           className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
           style={{ color: PREVIEW_COLORS.mutedText }}
         >

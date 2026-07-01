@@ -5,12 +5,13 @@ import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { MathText } from '@/lib/renderMath';
 import { ExamPaper } from '@/types/exam';
 import { ColumnCount, PageWatermark } from './A4Preview';
-import { useAutoPaginate } from '@/lib/usePagination';
+import { useAutoPaginate, useOverflowCorrection } from '@/lib/usePagination';
 
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
   columns?: ColumnCount;
   fontSize?: number;
+  active?: boolean;
 }
 
 interface FlatAnswerRow {
@@ -182,26 +183,20 @@ function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<Solu
 }
 
 // ─── Reserved heights ─────────────────────────────────────────────────────────
-// Page 1 of the answer key carries: doc header (~90px) + compact MCQ answer
-// grid (varies; 100 questions ≈ 10 rows × 20px = 200px) + "Solutions" label
-// (~30px) + some padding. We use 420px as a safe conservative estimate that
-// covers up to ~150 MCQ questions before solutions start overflowing.
-// The paginator self-corrects because it measures actual rendered heights —
-// this only controls where the *first* page break is allowed.
 const SOLUTIONS_RESERVED_FIRST: Record<ColumnCount, number> = {
   1: 440,
   2: 420,
   3: 410,
 };
 const SOLUTIONS_RESERVED_OTHER: Record<ColumnCount, number> = {
-  1: 90,
-  2: 85,
-  3: 80,
+  1: 125,
+  2: 120,
+  3: 115,
 };
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPreviewProps>(
-  ({ paper, columns = 2, fontSize = 11 }, ref) => {
+  ({ paper, columns = 2, fontSize = 11, active = true }, ref) => {
     const showHi = paper.metadata.language !== 'en';
     const showEn = paper.metadata.language !== 'hi';
 
@@ -240,16 +235,51 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
     }, [rows]);
 
     const measureRef = useRef<HTMLDivElement>(null!);
+    const rootRef = useRef<HTMLDivElement>(null!);
 
-    const solutionPages = useAutoPaginate(blockIds, measureRef, {
+    const setRootRef = (node: HTMLDivElement | null) => {
+      rootRef.current = node as HTMLDivElement;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    };
+
+    const SECTION_HEADER_EXTRA_PX = 26;
+    const firstRowId = rows[0]?.id;
+    const getExtraHeightBefore = (id: string) => {
+      const row = byId.get(id);
+      if (!row) return 0;
+      if (row.isFirstInSection && row.sectionTitleEn && id !== firstRowId) {
+        return SECTION_HEADER_EXTRA_PX;
+      }
+      return 0;
+    };
+
+    const getForcesNewRow = (id: string) => {
+      const row = byId.get(id);
+      if (!row) return false;
+      return row.isFirstInSection && !!row.sectionTitleEn && id !== firstRowId;
+    };
+
+    const measuredPages = useAutoPaginate(blockIds, measureRef, {
       reservedFirstPagePx: SOLUTIONS_RESERVED_FIRST[columns],
       reservedOtherPagePx: SOLUTIONS_RESERVED_OTHER[columns],
       columns,
       fontSize,
+      active,
+      extraHeightBefore: getExtraHeightBefore,
+      forcesNewRow: getForcesNewRow,
+    });
+
+    // Safety-net pass: after real pages render, fix any solution block that
+    // still visually overlaps the footer by bumping it to the next page.
+    const solutionPages = useOverflowCorrection(measuredPages, rootRef, {
+      pageSelector: '[data-content-page="true"]',
+      footerSelector: '[data-page-footer="true"]',
+      blockAttr: 'data-block-id',
     });
 
     return (
-      <div ref={ref} className="flex flex-col items-center gap-6">
+      <div ref={setRootRef} className="flex flex-col items-center gap-6">
         {/*
           Measurement container: position:fixed + top:-9999px so it's truly
           off-screen and not clipped by any ancestor's overflow:hidden or
@@ -295,9 +325,11 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
           <div
             key={pageIndex}
             className="answer-key-page relative"
+            data-content-page="true"
             style={{
               width: A4_WIDTH_PX,
-              minHeight: 1123,
+              height: 1123,
+              overflow: 'hidden',
               padding: '34px 38px 44px',
               backgroundColor: PREVIEW_COLORS.pageBackground,
               color: PREVIEW_COLORS.pageText,
@@ -314,6 +346,22 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   style={{ borderColor: PREVIEW_COLORS.pageText }}
                 >
                   <h1 className="text-base font-bold uppercase">Answer Key &amp; Solutions</h1>
+                  {showEn && paper.metadata.organisation && (
+                    <p
+                      className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
+                      style={{ color: PREVIEW_COLORS.quaternaryText }}
+                    >
+                      {paper.metadata.organisation}
+                    </p>
+                  )}
+                  {showHi && paper.metadata.organisationHi && (
+                    <p
+                      className="font-devanagari text-[10.5px] font-semibold"
+                      style={{ color: PREVIEW_COLORS.quaternaryText }}
+                    >
+                      {paper.metadata.organisationHi}
+                    </p>
+                  )}
                   {showEn && paper.metadata.examTitle && (
                     <p className="text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
                       {paper.metadata.examTitle}
@@ -327,11 +375,31 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                       {paper.metadata.examTitleHi}
                     </p>
                   )}
-                  {paper.metadata.examCode && (
-                    <p className="text-[10px]" style={{ color: PREVIEW_COLORS.mutedText }}>
-                      {paper.metadata.examCode}
-                    </p>
-                  )}
+
+                  {/* Identifying strip: code · set/series · date · duration · marks */}
+                  <div
+                    className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[9.5px]"
+                    style={{ color: PREVIEW_COLORS.mutedText }}
+                  >
+                    {paper.metadata.examCode && <span>{paper.metadata.examCode}</span>}
+                    {(paper.metadata.setCode || paper.metadata.bookletSeries) && (
+                      <span>
+                        Set {paper.metadata.setCode}
+                        {paper.metadata.bookletSeries && ` · ${paper.metadata.bookletSeries}`}
+                      </span>
+                    )}
+                    {paper.metadata.date && (
+                      <span>
+                        {new Date(paper.metadata.date).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                    {paper.metadata.duration && <span>{paper.metadata.duration}</span>}
+                    <span>Max Marks: {paper.metadata.maxMarks}</span>
+                  </div>
                 </div>
 
                 <AnswerGrid rows={rows} sizes={sizes} />
@@ -398,6 +466,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
 
             {/* Page footer */}
             <div
+              data-page-footer="true"
               className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
               style={{ color: PREVIEW_COLORS.mutedText }}
             >

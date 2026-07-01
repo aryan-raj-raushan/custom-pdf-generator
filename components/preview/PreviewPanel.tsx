@@ -116,18 +116,16 @@ export function PreviewPanel({
           <button
             type="button"
             onClick={() => setMode('paper')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              mode === 'paper' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
-            }`}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === 'paper' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+              }`}
           >
             <FileText size={13} /> Question paper
           </button>
           <button
             type="button"
             onClick={() => setMode('answerKey')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              mode === 'answerKey' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
-            }`}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${mode === 'answerKey' ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100'
+              }`}
           >
             <KeyRound size={13} /> Answer key
           </button>
@@ -146,11 +144,10 @@ export function PreviewPanel({
                   type="button"
                   title={opt.title}
                   onClick={() => handleColumnsChange(opt.value)}
-                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${
-                    columns === opt.value
-                      ? 'bg-stone-900 text-white'
-                      : 'bg-white text-stone-500 hover:bg-stone-50'
-                  }`}
+                  className={`flex h-7 w-8 items-center justify-center text-xs font-medium transition-colors ${columns === opt.value
+                    ? 'bg-stone-900 text-white'
+                    : 'bg-white text-stone-500 hover:bg-stone-50'
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -223,9 +220,20 @@ export function PreviewPanel({
       </div>
 
       {/* Preview area */}
-      <div className="flex-1 overflow-auto px-8 py-8">
-        {/* Both previews stay mounted so refs are always valid for PDF export */}
-        <div style={{ display: mode === 'paper' ? 'block' : 'none' }}>
+      <div className="relative flex-1 overflow-auto px-8 py-8">
+        {/* Both previews stay mounted AND laid out (never display:none) so
+            useAutoPaginate can actually measure + paginate the inactive one —
+            otherwise it never recalculates and combined export grabs a stale
+            single-page result. */}
+        <div
+          style={{
+            position: mode === 'paper' ? 'static' : 'absolute',
+            visibility: mode === 'paper' ? 'visible' : 'hidden',
+            pointerEvents: mode === 'paper' ? 'auto' : 'none',
+            top: 0,
+            left: 0,
+          }}
+        >
           <div
             style={{
               transform: `scale(${zoom})`,
@@ -239,10 +247,19 @@ export function PreviewPanel({
               highlightedQuestionId={highlightedQuestionId}
               columns={columns}
               fontSize={fontSize}
+              active={mode === 'paper'}
             />
           </div>
         </div>
-        <div style={{ display: mode === 'answerKey' ? 'block' : 'none' }}>
+        <div
+          style={{
+            position: mode === 'answerKey' ? 'static' : 'absolute',
+            visibility: mode === 'answerKey' ? 'visible' : 'hidden',
+            pointerEvents: mode === 'answerKey' ? 'auto' : 'none',
+            top: 0,
+            left: 0,
+          }}
+        >
           <div
             style={{
               transform: `scale(${zoom})`,
@@ -255,6 +272,7 @@ export function PreviewPanel({
               paper={paper}
               columns={columns}
               fontSize={fontSize}
+              active={mode === 'answerKey'}
             />
           </div>
         </div>
