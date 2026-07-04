@@ -16,6 +16,7 @@ interface QuestionBlockProps {
   showFlagIndicator?: boolean;
   columns?: ColumnCount;
   fontSize?: number;
+  highlightCorrectOption?: boolean; // NEW
 }
 
 /**
@@ -53,6 +54,7 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
       showFlagIndicator,
       columns = 2,
       fontSize = FONT_SIZE_DEFAULT,
+      highlightCorrectOption = false, // NEW
     },
     ref,
   ) => {
@@ -173,31 +175,68 @@ export const QuestionBlock = React.forwardRef<HTMLDivElement, QuestionBlockProps
             {(question.type === 'mcq' || question.type === 'assertion_reason') &&
               question.options && (
                 <div className={`mt-1 grid ${optionGrid} gap-y-0.5`}>
-                  {question.options.map((opt, i) => (
-                    <div key={opt.id} className="flex gap-1">
-                      <span className="font-semibold" style={{ fontSize: `${oSize}px` }}>
-                        ({String.fromCharCode(97 + i)})
-                      </span>
-                      <div style={{ fontSize: `${oSize}px` }}>
-                        {showEn && (
-                          <span>
-                            {question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}
-                          </span>
-                        )}
-                        {showHi && opt.textHi && (
-                          <span
-                            className="font-devanagari block"
-                            style={{
-                              color: PREVIEW_COLORS.tertiaryText,
-                              fontSize: `${oSize - 0.5}px`,
-                            }}
-                          >
-                            {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
-                          </span>
-                        )}
+                  {question.options.map((opt, i) => {
+                    const letterForIndex = String.fromCharCode(97 + i); // a, b, c, d
+                    const matchesCorrectLetter =
+                      question.correctAnswerLetter?.toLowerCase() === letterForIndex;
+                    const isAnswer =
+                      highlightCorrectOption && (opt.isCorrect || matchesCorrectLetter);
+
+                    return (
+                      <div
+                        key={opt.id}
+                        className="flex gap-1 rounded px-1"
+                        style={
+                          isAnswer
+                            ? {
+                                backgroundColor: 'rgba(34, 197, 94, 0.14)',
+                                outline: `2px solid ${PREVIEW_COLORS.successText}`,
+                                outlineOffset: '2px',
+                                paddingTop: '0.0625rem',
+                                paddingBottom: '0.0625rem',
+                                textAlign: 'center',
+                              }
+                            : undefined
+                        }
+                      >
+                        <span
+                          className="font-semibold"
+                          style={{
+                            fontSize: `${oSize}px`,
+                            color: isAnswer ? PREVIEW_COLORS.successText : undefined,
+                          }}
+                        >
+                          ({letterForIndex})
+                        </span>
+                        <div style={{ fontSize: `${oSize}px` }}>
+                          {showEn && (
+                            <span
+                              style={
+                                isAnswer
+                                  ? { fontWeight: 700, color: PREVIEW_COLORS.successText }
+                                  : undefined
+                              }
+                            >
+                              {question.hasMath ? <MathText text={opt.textEn} /> : opt.textEn}
+                            </span>
+                          )}
+                          {showHi && opt.textHi && (
+                            <span
+                              className="font-devanagari block"
+                              style={{
+                                color: isAnswer
+                                  ? PREVIEW_COLORS.successText
+                                  : PREVIEW_COLORS.tertiaryText,
+                                fontSize: `${oSize - 0.5}px`,
+                              }}
+                            >
+                              {question.hasMath ? <MathText text={opt.textHi} /> : opt.textHi}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

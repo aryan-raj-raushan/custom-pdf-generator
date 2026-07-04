@@ -520,5 +520,16 @@ export async function exportCombinedPreviewToPdf(
   }
 }
 
+export async function exportHighlightedPdf(
+  highlightedPaperRootEl: HTMLElement,
+  answerGridOnlyRootEl: HTMLElement,
+  options: ExportCombinedPdfOptions = {},
+) {
+  return exportCombinedPreviewToPdf(highlightedPaperRootEl, answerGridOnlyRootEl, {
+    ...options,
+    fileName: options.fileName ?? 'question-paper-highlighted',
+  });
+}
+
 export const A4_PAGE_HEIGHT_PX = Math.round(A4_HEIGHT_MM * PX_PER_MM);
 export const A4_PAGE_WIDTH_PX = Math.round(A4_WIDTH_MM * PX_PER_MM);

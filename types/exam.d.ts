@@ -75,6 +75,9 @@ export interface ExamMetadata {
     /** Base64 data URL of the uploaded cover image. */
     imageDataUrl?: string;
   };
+
+  headerMode?: 'template' | 'banner';
+  headerBannerImageUrl?: string;
 }
 export interface QuestionOption {
   id: string;

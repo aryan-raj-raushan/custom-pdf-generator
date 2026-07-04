@@ -348,7 +348,7 @@ export function CoachingPageFooter({
         {footerText && (
           <span style={{ fontFamily: 'var(--font-devanagari, inherit)' }}>{footerText}</span>
         )}
-        {!footerText && <span className="opacity-40">Custom PDF Creator</span>}
+        {!footerText && <span className="opacity-40">Test PDF</span>}
       </div>
 
       {/* Right: page number */}
@@ -466,4 +466,21 @@ function formatDate(iso: string) {
   } catch {
     return iso;
   }
+}
+
+// ─────────────────────────────────────────────────────────
+//  HeaderBanner — replaces the entire template header +
+//  instructions block with a single full-width image.
+// ─────────────────────────────────────────────────────────
+export function HeaderBanner({ imageUrl }: Readonly<{ imageUrl: string }>) {
+  return (
+    <div className="mb-2 w-full select-none overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt="Exam header"
+        style={{ width: '100%', display: 'block', objectFit: 'contain' }}
+      />
+    </div>
+  );
 }

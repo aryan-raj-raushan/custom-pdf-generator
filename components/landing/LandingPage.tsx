@@ -30,6 +30,7 @@ import {
   Database,
   Award,
 } from 'lucide-react';
+import Image from 'next/image';
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
 const ACCENT = '#1744F2';
@@ -167,7 +168,7 @@ function ExamPaperMockup() {
         ))}
       </div>
       <div className="bg-gray-50 border-t border-gray-200 px-4 py-1.5 flex justify-between text-[7px] text-gray-400">
-        <span>© CustomPDF Creator</span>
+        <span>© TestPDF</span>
         <span>Page 1 of 8</span>
       </div>
     </div>
@@ -188,11 +189,11 @@ function Navbar({ isLoggedIn }: Readonly<{ isLoggedIn: boolean }>) {
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between h-16">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-gray-900 flex items-center justify-center">
-            <FileText className="w-3.5 h-3.5 text-white" />
+          <div className="flex items-center justify-center rounded bg-gray-900">
+            <Image src="/testpdflogo.jpeg" alt="TestPDF" width={45} height={45} />
           </div>
-          <span className="font-semibold text-[15px] text-gray-900 tracking-tight">
-            CustomPDF<span style={{ color: ACCENT }}>Creator</span>
+          <span className="font-bold text-[18px] text-gray-900 tracking-tight">
+            Test<span style={{ color: ACCENT }}>PDF</span>
           </span>
         </div>
         <div className="hidden md:flex items-center gap-1">
@@ -397,7 +398,7 @@ function MetricsSection() {
       Icon: TrendingUp,
       stat: '6.8×',
       label: 'faster exports compared to manual layout',
-      sub: 'Median: 52 min (Word) → 7.6 min (CustomPDF)',
+      sub: 'Median: 52 min (Word) → 7.6 min (TestPDF)',
     },
     {
       Icon: Database,
@@ -438,7 +439,7 @@ function MetricsSection() {
             Numbers that tell the story.
           </h2>
           <p className="text-[15px] text-gray-400 mt-3 max-w-md">
-            Real data from real teams using CustomPDF Creator in production.
+            Real data from real teams using TestPDF in production.
           </p>
         </AnimSection>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-700">
@@ -526,7 +527,7 @@ function ComparisonTable() {
                   <th className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-widest bg-green-50 text-green-600 w-[35%]">
                     <span className="flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      CustomPDF Creator
+                      TestPDF
                     </span>
                   </th>
                 </tr>
@@ -1001,7 +1002,7 @@ function Testimonials() {
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 const FAQS = [
   {
-    q: 'What exam formats does Custom PDF Creator support?',
+    q: 'What exam formats does Test PDF support?',
     a: '14 formats: SSC CGL, SSC CHSL, IBPS PO, SBI Clerk, RRB NTPC, UPSC Prelims, State PSC, JEE Mains & Advanced, NEET UG, CUET, CTET, Police Exams, School Exams, and University Entrance Examinations.',
   },
   {
@@ -1129,7 +1130,7 @@ function Footer() {
             <FileText className="w-3 h-3 text-white" />
           </div>
           <span className="font-semibold text-[14px] text-gray-900">
-            CustomPDF<span style={{ color: ACCENT }}>Creator</span>
+            Test<span style={{ color: ACCENT }}>PDF</span>
           </span>
         </div>
         <div className="flex gap-6">

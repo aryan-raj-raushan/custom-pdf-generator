@@ -149,6 +149,8 @@ export function CustomPdfCreator({
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
 
   const saveMenuRef = useRef<HTMLDivElement>(null);
+  const highlightedPreviewRef = useRef<HTMLDivElement>(null!);
+  const answerGridOnlyRef = useRef<HTMLDivElement>(null!);
 
   useEffect(() => {
     if (!saveMenuOpen) return;
@@ -272,9 +274,7 @@ export function CustomPdfCreator({
             <FileText size={16} />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-stone-900">
-              {initialName || 'Custom PDF Creator'}
-            </h1>
+            <h1 className="text-sm font-semibold text-stone-900">{initialName || 'Test PDF'}</h1>
             <div className="flex items-center gap-2">
               <p className="text-[11px] text-stone-400">
                 {totalQuestions} question{totalQuestions === 1 ? '' : 's'} · {paper.sections.length}{' '}
@@ -309,6 +309,8 @@ export function CustomPdfCreator({
             previewRef={previewRef}
             answerKeyRef={answerKeyRef}
             fileName={paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}
+            highlightedPreviewRef={highlightedPreviewRef}
+            answerGridOnlyRef={answerGridOnlyRef}
           />
 
           {/* Save — edit only */}
@@ -420,6 +422,8 @@ export function CustomPdfCreator({
             jumpToken={jumpToken}
             onColumnsChange={handleColumnsChange}
             onFontSizeChange={handleFontSizeChange}
+            highlightedPreviewRef={highlightedPreviewRef}
+            answerGridOnlyRef={answerGridOnlyRef}
           />
         </div>
       </div>

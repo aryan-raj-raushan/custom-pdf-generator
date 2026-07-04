@@ -18,6 +18,15 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const watermarkImageRef = useRef<HTMLInputElement>(null);
   const coverImageRef = useRef<HTMLInputElement>(null);
+  const bannerImageRef = useRef<HTMLInputElement>(null);
+
+  function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => update('headerBannerImageUrl', reader.result as string);
+    reader.readAsDataURL(file);
+  }
 
   // Tracks which instruction rows have the Hindi field expanded.
   // Initialised lazily per-row: on if hindi text already exists or paper isn't English-only.
@@ -152,8 +161,81 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     >
       {/* ── Template ──────────────────────────────────── */}
       <section className="flex flex-col gap-4">
-        <SectionLabel>Header template</SectionLabel>
-        <TemplatePicker metadata={metadata} onChange={onChange} />
+        <SectionLabel>Header</SectionLabel>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => update('headerMode', 'template')}
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              (metadata.headerMode ?? 'template') === 'template'
+                ? 'bg-stone-900 text-white'
+                : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+            }`}
+          >
+            Template header
+          </button>
+          <button
+            type="button"
+            onClick={() => update('headerMode', 'banner')}
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              metadata.headerMode === 'banner'
+                ? 'bg-stone-900 text-white'
+                : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+            }`}
+          >
+            Banner image
+          </button>
+        </div>
+
+        {(metadata.headerMode ?? 'template') === 'template' && (
+          <TemplatePicker metadata={metadata} onChange={onChange} />
+        )}
+
+        {metadata.headerMode === 'banner' && (
+          <div className="flex items-center gap-3 rounded-lg border border-stone-100 bg-stone-50/60 p-3">
+            <button
+              type="button"
+              onClick={() => bannerImageRef.current?.click()}
+              className="flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-stone-300 bg-white text-stone-400 hover:border-stone-400 hover:text-stone-600"
+            >
+              {metadata.headerBannerImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={metadata.headerBannerImageUrl}
+                  alt="Banner"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Upload size={18} />
+              )}
+            </button>
+            <input
+              ref={bannerImageRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBannerUpload}
+            />
+            <div className="flex flex-col gap-1">
+              <span className="text-[13px] font-medium text-stone-700">
+                {metadata.headerBannerImageUrl ? 'Banner uploaded' : 'Upload header banner'}
+              </span>
+              <span className="text-xs text-stone-400">
+                Replaces title, roll no. box, and instructions with this image
+              </span>
+              {metadata.headerBannerImageUrl && (
+                <button
+                  type="button"
+                  onClick={() => update('headerBannerImageUrl', undefined)}
+                  className="flex w-fit items-center gap-1 text-[11px] text-stone-400 hover:text-red-500"
+                >
+                  <X size={12} /> Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── Identity ──────────────────────────────────── */}

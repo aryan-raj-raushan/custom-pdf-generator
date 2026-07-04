@@ -5,7 +5,7 @@ import 'katex/dist/katex.min.css';
 import { notoDevanagari, tinos } from '@/lib/fallback/font';
 
 export const metadata: Metadata = {
-  title: 'Custm PDF Creator',
+  title: 'Test PDF',
   description: 'Create, manage, and export custom exam papers.',
 };
 

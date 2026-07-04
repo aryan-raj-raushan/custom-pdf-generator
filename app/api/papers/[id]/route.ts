@@ -28,6 +28,7 @@ function buildMeta(paper: ExamPaper, totalQuestions: number) {
     columns: (paper.metadata.columns ?? 2) as 1 | 2 | 3,
     fontSize: (paper.metadata.fontSize ?? 11) as number,
     headerTemplate: paper.metadata.headerTemplate ?? 'classic',
+    headerMode: paper.metadata.headerMode ?? 'template',
   };
 }
 

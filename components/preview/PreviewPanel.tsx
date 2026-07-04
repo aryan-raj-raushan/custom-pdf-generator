@@ -27,6 +27,8 @@ interface PreviewPanelProps {
   onColumnsChange?: (columns: ColumnCount) => void;
   /** Called when the user changes font size */
   onFontSizeChange?: (fontSize: number) => void;
+  highlightedPreviewRef: React.RefObject<HTMLDivElement>;
+  answerGridOnlyRef: React.RefObject<HTMLDivElement>;
 }
 
 const ZOOM_STEPS = [0.5, 0.6, 0.75, 0.85, 1];
@@ -49,6 +51,8 @@ export function PreviewPanel({
   jumpToken,
   onColumnsChange,
   onFontSizeChange,
+  highlightedPreviewRef,
+  answerGridOnlyRef,
 }: Readonly<PreviewPanelProps>) {
   const [zoomIndex, setZoomIndex] = useState(2); // default 0.75
   const [mode, setMode] = useState<'paper' | 'answerKey'>('paper');
@@ -224,6 +228,45 @@ export function PreviewPanel({
 
       {/* Preview area */}
       <div className="relative flex-1 overflow-auto px-8 py-8">
+        {/* Hidden: highlighted-answer question paper, used only for export */}
+        <div
+          style={{
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            top: 0,
+            left: 0,
+          }}
+        >
+          <A4Preview
+            ref={highlightedPreviewRef}
+            paper={paper}
+            columns={columns}
+            fontSize={fontSize}
+            active
+            highlightCorrectAnswers
+          />
+        </div>
+
+        {/* Hidden: answer grid only (no solutions), used only for export */}
+        <div
+          style={{
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            top: 0,
+            left: 0,
+          }}
+        >
+          <AnswerKeyPreview
+            ref={answerGridOnlyRef}
+            paper={paper}
+            columns={columns}
+            fontSize={fontSize}
+            active
+            hideSolutions
+          />
+        </div>
         {/* Both previews stay mounted AND laid out (never display:none) so
             useAutoPaginate can actually measure + paginate the inactive one —
             otherwise it never recalculates and combined export grabs a stale

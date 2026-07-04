@@ -4,7 +4,7 @@
 import React, { useMemo, useRef } from 'react';
 import { ExamPaper, Question } from '@/types/exam';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
-import { PaperHeader, InstructionsBlock, CoachingPageFooter } from './PaperHeader';
+import { PaperHeader, InstructionsBlock, CoachingPageFooter, HeaderBanner } from './PaperHeader';
 import { QuestionBlock } from './QuestionBlock';
 import { useAutoPaginate, useOverflowCorrection } from '@/lib/usePagination';
 import { FONT_SIZE_DEFAULT } from './PreviewPanel';
@@ -26,6 +26,7 @@ interface A4PreviewProps {
   columns?: ColumnCount;
   fontSize?: number;
   active?: boolean;
+  highlightCorrectAnswers?: boolean; // NEW
 }
 
 function getReservedFirstPage(columns: ColumnCount, fontSize: number): number {
@@ -56,7 +57,14 @@ const MEASURE_WIDTHS: Record<ColumnCount, number> = {
 
 export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
   (
-    { paper, highlightedQuestionId, columns = 2, fontSize = FONT_SIZE_DEFAULT, active = true },
+    {
+      paper,
+      highlightedQuestionId,
+      columns = 2,
+      fontSize = FONT_SIZE_DEFAULT,
+      active = true,
+      highlightCorrectAnswers = false, // ADD THIS
+    },
     ref,
   ) => {
     const measureRef = useRef<HTMLDivElement>(null!);
@@ -162,11 +170,15 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
             {flatQuestions.map((f) => (
               <div key={f.blockId} data-block-id={f.blockId}>
                 <QuestionBlock
+                  key={f.blockId}
                   question={f.question}
                   number={f.number}
                   metadata={paper.metadata}
+                  isHighlighted={f.blockId === highlightedQuestionId}
+                  showFlagIndicator
                   columns={columns}
                   fontSize={fontSize}
+                  highlightCorrectOption={highlightCorrectAnswers}
                 />
               </div>
             ))}
@@ -187,8 +199,14 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
           >
             {pageIndex === 0 && (
               <>
-                <PaperHeader metadata={paper.metadata} />
-                <InstructionsBlock metadata={paper.metadata} />
+                {paper.metadata.headerMode === 'banner' && paper.metadata.headerBannerImageUrl ? (
+                  <HeaderBanner imageUrl={paper.metadata.headerBannerImageUrl} />
+                ) : (
+                  <>
+                    <PaperHeader metadata={paper.metadata} />
+                    <InstructionsBlock metadata={paper.metadata} />
+                  </>
+                )}
               </>
             )}
             {pageIndex > 0 && <RunningHeader metadata={paper.metadata} />}
@@ -242,6 +260,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
                             showFlagIndicator
                             columns={columns}
                             fontSize={fontSize}
+                            highlightCorrectOption={highlightCorrectAnswers}
                           />
                         ))}
                       </div>
@@ -412,7 +431,7 @@ function Page({
           className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
           style={{ color: PREVIEW_COLORS.mutedText }}
         >
-          <span>Custom PDF Creator</span>
+          <span>Test PDF</span>
           <span>
             Page {pageNumber} of {totalPages}
           </span>

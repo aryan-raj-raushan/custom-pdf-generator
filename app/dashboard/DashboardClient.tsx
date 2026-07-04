@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { createEmptyMetadata, createEmptySection } from '@/components/layout/CustomPdfCreator';
+import Image from 'next/image';
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
 const ACCENT = '#1744F2';
@@ -617,15 +618,15 @@ export default function DashboardClient({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
           {/* Logo + counter */}
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-900">
-              <FileText size={14} className="text-white" />
+            <div className="flex items-center justify-center rounded bg-gray-900">
+              <Image src="/testpdflogo.jpeg" alt="TestPDF" width={45} height={45} />
             </div>
             <div>
               <span className="text-[14px] font-bold text-gray-900">
-                CustomPDF<span style={{ color: ACCENT }}>Creator</span>
+                Test<span style={{ color: ACCENT }}>PDF</span>
               </span>
             </div>
             <div className="ml-2 hidden sm:block">

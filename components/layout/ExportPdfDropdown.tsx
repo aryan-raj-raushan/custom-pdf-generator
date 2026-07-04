@@ -1,23 +1,32 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, FileStack, KeyRound, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Download, FileStack, KeyRound, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { exportPreviewToPdf, exportCombinedPreviewToPdf, ExportProgress } from '@/lib/exportPdf';
+import {
+  exportPreviewToPdf,
+  exportCombinedPreviewToPdf,
+  ExportProgress,
+  exportHighlightedPdf,
+} from '@/lib/exportPdf';
 import { ExportProgressOverlay } from './ExportProgressOverlay';
 
 interface ExportPdfDropdownProps {
   previewRef: React.RefObject<HTMLDivElement>;
   answerKeyRef: React.RefObject<HTMLDivElement>;
+  highlightedPreviewRef: React.RefObject<HTMLDivElement>; // NEW
+  answerGridOnlyRef: React.RefObject<HTMLDivElement>; // NEW
   fileName: string;
 }
 
-type ExportKind = 'combined' | 'paper' | 'answerKey';
+type ExportKind = 'combined' | 'paper' | 'answerKey' | 'highlighted';
 
 export function ExportPdfDropdown({
   previewRef,
   answerKeyRef,
   fileName,
+  highlightedPreviewRef,
+  answerGridOnlyRef,
 }: Readonly<ExportPdfDropdownProps>) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ExportKind | null>(null);
@@ -58,6 +67,12 @@ export function ExportPdfDropdown({
         await exportPreviewToPdf(previewRef.current, {
           fileName,
           pageClassName: 'pdf-page',
+          onProgress: setProgress,
+        });
+      } else if (kind === 'highlighted') {
+        if (!highlightedPreviewRef.current || !answerGridOnlyRef.current) return;
+        await exportHighlightedPdf(highlightedPreviewRef.current, answerGridOnlyRef.current, {
+          fileName: `${fileName}-highlighted`,
           onProgress: setProgress,
         });
       } else {
@@ -113,6 +128,19 @@ export function ExportPdfDropdown({
           >
             <KeyRound size={14} />
             Export answer key
+          </button>
+          <button
+            type="button"
+            onClick={() => runExport('highlighted')}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
+          >
+            <CheckCircle2 size={14} />
+            <span>
+              Export PDF with highlighted answers
+              <span className="block text-[11px] font-normal text-stone-400">
+                Correct option marked + answer key (no solutions)
+              </span>
+            </span>
           </button>
         </div>
       ) : null}
