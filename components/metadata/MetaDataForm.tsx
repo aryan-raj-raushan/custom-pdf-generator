@@ -7,6 +7,7 @@ import { Plus, Trash2, Upload, X, Languages } from 'lucide-react';
 import { ExamMetadata } from '@/types/exam';
 import { Field, Input, Select, TextArea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { FontSizeStepper } from '@/components/ui/FontSizeStepper';
 import { TemplatePicker } from './TemplatePicker';
 
 interface MetadataFormProps {
@@ -56,6 +57,20 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
   function update<K extends keyof ExamMetadata>(key: K, value: ExamMetadata[K]) {
     onChange({ ...metadata, [key]: value });
+  }
+
+  function updateHeaderFontSize(
+    key: keyof NonNullable<ExamMetadata['headerFontSizes']>,
+    value: number,
+  ) {
+    const next = Math.min(28, Math.max(8, Number(value) || 8));
+    onChange({
+      ...metadata,
+      headerFontSizes: {
+        ...metadata.headerFontSizes,
+        [key]: next,
+      },
+    });
   }
 
   function updateInstruction(index: number, value: string, lang: 'en' | 'hi') {
@@ -187,6 +202,27 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
           <TemplatePicker metadata={metadata} onChange={onChange} />
         )}
 
+        {(metadata.headerMode ?? 'template') === 'template' &&
+          (metadata.headerTemplate ?? 'classic') !== 'coaching' && (
+            <Field
+              label="Footer left text"
+              hint="Shown at the bottom-left of question paper and used as the base for answer key footer"
+            >
+              <div className="flex items-center gap-2">
+                <Input
+                  value={metadata.footerText ?? 'Test PDF'}
+                  onChange={(e) => update('footerText', e.target.value)}
+                  placeholder="Test PDF"
+                  className="flex-1"
+                />
+                <FontSizeStepper
+                  value={metadata.headerFontSizes?.footer ?? 12}
+                  onChange={(value) => updateHeaderFontSize('footer', value)}
+                />
+              </div>
+            </Field>
+          )}
+
         {metadata.headerMode === 'banner' && (
           <div className="flex items-center gap-3 rounded-lg border border-stone-100 bg-stone-50/60 p-3">
             <button
@@ -273,11 +309,18 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         </div>
 
         <Field label="Organisation / Board name">
-          <Input
-            value={metadata.organisation}
-            onChange={(e) => update('organisation', e.target.value)}
-            placeholder="Staff Selection Commission"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              value={metadata.organisation}
+              onChange={(e) => update('organisation', e.target.value)}
+              placeholder="Staff Selection Commission"
+              className="flex-1"
+            />
+            <FontSizeStepper
+              value={metadata.headerFontSizes?.organisation ?? 15}
+              onChange={(value) => updateHeaderFontSize('organisation', value)}
+            />
+          </div>
         </Field>
 
         <Field label="Organisation name (Hindi)" hint="शीर्षक हिंदी में">
@@ -289,11 +332,18 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         </Field>
 
         <Field label="Exam title">
-          <Input
-            value={metadata.examTitle}
-            onChange={(e) => update('examTitle', e.target.value)}
-            placeholder="Combined Graduate Level Examination"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              value={metadata.examTitle}
+              onChange={(e) => update('examTitle', e.target.value)}
+              placeholder="Combined Graduate Level Examination"
+              className="flex-1"
+            />
+            <FontSizeStepper
+              value={metadata.headerFontSizes?.title ?? 18}
+              onChange={(value) => updateHeaderFontSize('title', value)}
+            />
+          </div>
         </Field>
 
         <Field label="Exam title (Hindi)">
@@ -306,11 +356,19 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Exam code">
-            <Input
-              value={metadata.examCode ?? ''}
-              onChange={(e) => update('examCode', e.target.value)}
-              placeholder="SSC-CGL-2026"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={metadata.examCode ?? ''}
+                onChange={(e) => update('examCode', e.target.value)}
+                placeholder="SSC-CGL-2026"
+                className="flex-1"
+              />
+              <FontSizeStepper
+                value={metadata.headerFontSizes?.meta ?? 12.5}
+                step={0.5}
+                onChange={(value) => updateHeaderFontSize('meta', value)}
+              />
+            </div>
           </Field>
           <Field label="Set / Series">
             <div className="flex gap-2">
@@ -505,6 +563,11 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
         <div className="flex items-center justify-between">
           <SectionLabel>General instructions</SectionLabel>
           <div className="flex items-center gap-2">
+            <FontSizeStepper
+              value={metadata.headerFontSizes?.instructions ?? 10.5}
+              step={0.5}
+              onChange={(value) => updateHeaderFontSize('instructions', value)}
+            />
             <Toggle
               label=""
               checked={metadata.generalInstructionsEnabled ?? true}

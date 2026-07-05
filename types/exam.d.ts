@@ -33,6 +33,13 @@ export interface ExamMetadata {
   /** Layout preference persisted with the paper: 1 | 2 | 3 columns. Default 2. */
   columns?: 1 | 2 | 3;
   fontSize?: number;
+  headerFontSizes?: {
+    organisation?: number;
+    title?: number;
+    meta?: number;
+    instructions?: number;
+    footer?: number;
+  };
   /** Which header/footer template to use. Default: 'classic'. */
   headerTemplate?: 'classic' | 'coaching' | 'minimal';
 
@@ -55,6 +62,8 @@ export interface ExamMetadata {
    * Text shown in the dark bar at the absolute bottom of every page.
    */
   footerBrandText?: string;
+  /** Standard footer text used by classic/minimal paper footers and answer key footers. */
+  footerText?: string;
 
   /** Coaching template only. Hex color for badge block + footer bars. Default '#1a1a1a'. */
   footerBrandColor?: string;

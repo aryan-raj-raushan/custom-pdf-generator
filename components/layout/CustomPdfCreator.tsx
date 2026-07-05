@@ -69,6 +69,14 @@ export function createEmptyMetadata(): ExamMetadata {
     language: 'bilingual',
     columns: 2, // default layout
     fontSize: 11,
+    footerText: 'Test PDF',
+    headerFontSizes: {
+      organisation: 15,
+      title: 17,
+      meta: 12.5,
+      instructions: 10.5,
+      footer: 9,
+    },
   };
 }
 

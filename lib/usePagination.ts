@@ -2,6 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { A4_PAGE_HEIGHT_PX } from './exportPdf';
+import { findTextSplitOffset } from './textSplit';
+
+/**
+ * When a fragment is split mid-text instead of being moved whole, this
+ * records which slice of its full text each rendered piece (the original
+ * id, or a synthetic continuation id) should show. `baseId` always points
+ * at the original (never-split) fragment id, so the renderer can look up
+ * the fragment's real data even for synthetic tail ids. `to: null` means
+ * "through the end of the text".
+ */
+export interface TextRange {
+  baseId: string;
+  from: number;
+  to: number | null;
+}
+
+export type TextRangeMap = Map<string, TextRange>;
 
 function pagesKeyFromColumns(pages: string[][][]): string {
   return pages.map((page) => page.map((column) => column.join(',')).join('||')).join('|');
@@ -221,8 +238,19 @@ export function useRenderedColumnPagination(
     safetyBufferPx?: number;
     maxPasses?: number;
     resetKey?: string;
+    /**
+     * Given the DOM node for a fragment (matched by blockAttr), return the
+     * single Text node that may be split mid-paragraph when this fragment
+     * would otherwise overflow — or null if this fragment can't be split
+     * (falls back to moving the whole fragment, the previous behavior).
+     * This is what makes pagination book-like: a paragraph that doesn't
+     * fully fit still renders as much as fits, with the remainder flowing
+     * to the next column/page as a new fragment instead of the whole
+     * paragraph jumping down.
+     */
+    getSplitTextNode?: (blockNode: HTMLElement) => Text | null;
   },
-) {
+): { pages: string[][][]; textRanges: TextRangeMap } {
   const {
     pageSelector,
     columnSelector,
@@ -231,15 +259,24 @@ export function useRenderedColumnPagination(
     columns,
     active = true,
     safetyBufferPx = 18,
-    maxPasses = 40,
+    // Each pass resolves at most one overflow per column, and splitting a
+    // fragment mid-paragraph means a single long question/solution can now
+    // need several passes on its own (one per column/page it flows across).
+    // A large multi-page paper (dozens of questions, several columns) can
+    // need well over 40 corrections to fully converge — raised from 40 so
+    // large documents don't get left in a partially-corrected state.
+    maxPasses = 400,
     resetKey = '',
+    getSplitTextNode,
   } = options;
 
   const [pages, setPages] = useState<string[][][]>(() =>
     createSeededColumnPages(blockIds, columns),
   );
+  const [textRanges, setTextRanges] = useState<TextRangeMap>(() => new Map());
   const passRef = useRef(0);
   const pagesKeyRef = useRef(pagesKeyFromColumns(createSeededColumnPages(blockIds, columns)));
+  const tailCounterRef = useRef<Map<string, number>>(new Map());
   const blockIdsKey = blockIds.join('|');
 
   useEffect(() => {
@@ -247,8 +284,10 @@ export function useRenderedColumnPagination(
     const seededKey = pagesKeyFromColumns(seeded);
     pagesKeyRef.current = seededKey;
     passRef.current = 0;
+    tailCounterRef.current = new Map();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPages(seeded);
+    setTextRanges(new Map());
   }, [blockIds, blockIdsKey, columns, resetKey]);
 
   useEffect(() => {
@@ -307,7 +346,59 @@ export function useRenderedColumnPagination(
         if (pageNodes.length === 0) return;
 
         const next = pages.map((page) => page.map((column) => [...column]));
+        const nextTextRanges: TextRangeMap = new Map(textRanges);
         let changed = false;
+
+        // A split that only keeps a sliver of text isn't worth it — it
+        // reads as "nothing there" even when technically non-empty.
+        // Below this many characters, prefer moving the whole remaining
+        // piece forward instead of committing to the split.
+        const MIN_SPLIT_CHARS = 10;
+        // Cap how many times a single paragraph can be split further.
+        // Beyond this, stop trying to slice it more finely — whatever
+        // remains just moves forward as one block. This guarantees the
+        // cascade can't oscillate or over-fragment a single paragraph
+        // indefinitely; it always converges to "the rest moves on".
+        const MAX_SPLITS_PER_FRAGMENT = 4;
+
+        // Attempts to split `id`'s rendered text at `dangerLine`. Returns
+        // the new tail id if a split was made (nextTextRanges updated),
+        // or null if the fragment isn't splittable, nothing meaningful
+        // fits, or it's already been split too many times — caller should
+        // fall back to moving the whole fragment.
+        const trySplit = (
+          blockNode: HTMLElement,
+          id: string,
+          dangerLine: number,
+        ): string | null => {
+          if (!getSplitTextNode) return null;
+
+          const existing = nextTextRanges.get(id);
+          const rootId = existing?.baseId ?? id;
+          if ((tailCounterRef.current.get(rootId) ?? 0) >= MAX_SPLITS_PER_FRAGMENT) return null;
+
+          const textNode = getSplitTextNode(blockNode);
+          if (!textNode) return null;
+
+          const relOffset = findTextSplitOffset(textNode, dangerLine);
+          if (relOffset == null) return null;
+
+          const remainingLen = textNode.textContent?.length ?? 0;
+          if (relOffset < MIN_SPLIT_CHARS && relOffset < remainingLen) return null;
+
+          const baseFrom = existing?.from ?? 0;
+          const baseTo = existing?.to ?? null;
+          const absoluteCut = baseFrom + relOffset;
+
+          nextTextRanges.set(id, { baseId: rootId, from: baseFrom, to: absoluteCut });
+
+          const nextCounter = (tailCounterRef.current.get(rootId) ?? 0) + 1;
+          tailCounterRef.current.set(rootId, nextCounter);
+          const tailId = `${rootId}::tail:${nextCounter}`;
+          nextTextRanges.set(tailId, { baseId: rootId, from: absoluteCut, to: baseTo });
+
+          return tailId;
+        };
 
         for (let pageIndex = 0; pageIndex < pageNodes.length; pageIndex++) {
           const pageNode = pageNodes[pageIndex];
@@ -330,6 +421,7 @@ export function useRenderedColumnPagination(
             const columnRect = columnNode.getBoundingClientRect();
             let previousBottom = columnRect.top;
             let cutIndex = -1;
+            let splitTailId: string | null = null;
 
             for (let blockIndex = 0; blockIndex < idsInColumn.length; blockIndex++) {
               const id = idsInColumn[blockIndex];
@@ -341,6 +433,12 @@ export function useRenderedColumnPagination(
               const isTooTallForCurrentColumn = occupiedBottom > pageDangerLine;
 
               if (isTooTallForCurrentColumn) {
+                const tailId = trySplit(blockNode, id, pageDangerLine);
+                if (tailId) {
+                  cutIndex = blockIndex + 1;
+                  splitTailId = tailId;
+                  break;
+                }
                 if (blockIndex === 0) {
                   previousBottom = rect.bottom;
                   continue;
@@ -354,6 +452,7 @@ export function useRenderedColumnPagination(
 
             if (cutIndex !== -1) {
               const overflowIds = idsInColumn.splice(cutIndex);
+              if (splitTailId) overflowIds.unshift(splitTailId);
               moveOverflow(next, pageIndex, columnIndex, overflowIds);
               changed = true;
             }
@@ -368,6 +467,7 @@ export function useRenderedColumnPagination(
           passRef.current += 1;
           pagesKeyRef.current = nextKey;
           setPages(normalized);
+          setTextRanges(nextTextRanges);
         }
       });
     });
@@ -383,10 +483,12 @@ export function useRenderedColumnPagination(
     columns,
     containerRef,
     footerSelector,
+    getSplitTextNode,
     maxPasses,
     pageSelector,
     pages,
     safetyBufferPx,
+    textRanges,
   ]);
 
   useEffect(() => {
@@ -424,7 +526,7 @@ export function useRenderedColumnPagination(
     };
   }, [active, blockIdsKey, resetKey]);
 
-  return pages;
+  return { pages, textRanges };
 }
 
 export function useAutoPaginateByColumn(

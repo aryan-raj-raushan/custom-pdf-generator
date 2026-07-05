@@ -2,10 +2,15 @@
 
 import React, { useMemo, useRef } from 'react';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
-import { MathText } from '@/lib/renderMath';
 import { ExamPaper } from '@/types/exam';
 import { ColumnCount, PageWatermark } from './A4Preview';
-import { useRenderedColumnPagination } from '@/lib/usePagination';
+import { TextRange, useRenderedColumnPagination } from '@/lib/usePagination';
+import {
+  SPLITTABLE_TEXT_ATTR,
+  rootFragmentId,
+  renderMonoOrBilingualText,
+  resolveDisplayText,
+} from '@/lib/textFragment';
 
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
@@ -24,6 +29,44 @@ interface FlatAnswerRow {
   solutionHi?: string;
   sectionTitleEn?: string;
   isFirstInSection: boolean;
+  hasMath: boolean;
+}
+
+type AnswerFragmentKind = 'answer' | 'solution';
+
+interface FlatAnswerFragment {
+  blockId: string;
+  rowId: string;
+  row: FlatAnswerRow;
+  kind: AnswerFragmentKind;
+  showNumber: boolean;
+}
+
+function buildAnswerFragments(rows: FlatAnswerRow[]): FlatAnswerFragment[] {
+  const out: FlatAnswerFragment[] = [];
+  rows.forEach((row) => {
+    const hasAnswer = !!row.letter;
+    if (hasAnswer) {
+      out.push({
+        blockId: `${row.id}::answer`,
+        rowId: row.id,
+        row,
+        kind: 'answer',
+        showNumber: true,
+      });
+    }
+    // Always emit a 'solution' fragment (even with no solution text, it
+    // shows the "No solution provided" placeholder) so every row has at
+    // least one fragment and keeps its number visible somewhere.
+    out.push({
+      blockId: `${row.id}::solution`,
+      rowId: row.id,
+      row,
+      kind: 'solution',
+      showNumber: !hasAnswer,
+    });
+  });
+  return out;
 }
 
 interface AnswerGridProps {
@@ -52,44 +95,40 @@ function getAnswerSizes(fontSize: number) {
   return {
     pageTitle: 16 + delta,
     examTitle: 12 + delta,
+    organisation: 10.5 + delta * 0.7,
     examCode: 10 + delta * 0.8,
     sectionHeader: 10 + delta,
     solutionText: fontSize,
     answerGridNumber: 9 + delta * 0.7,
     answerGridLetter: 9.5 + delta * 0.7,
+    blockNumber: 11 + delta * 0.8,
+    answerLabel: Math.max(10, fontSize + 0.2),
+    noSolution: Math.max(9, 9 + delta * 0.6),
+    metaRow: 9.5 + delta * 0.6,
     footer: Math.max(8, 9 + delta * 0.5),
     runningHeader: Math.max(9, 10 + delta * 0.5),
   };
 }
 
-function InlineSolutionRun({
-  text,
-  className,
-  continuationClassName,
-  continuationStyle,
-}: Readonly<{
-  text: string;
-  className?: string;
-  continuationClassName?: string;
-  continuationStyle?: React.CSSProperties;
-}>) {
-  const [firstLine, ...rest] = text.split('\n');
+function ContinuationBadge({
+  number,
+  visible,
+  sizePx,
+}: Readonly<{ number: number; visible: boolean; sizePx: number }>) {
   return (
-    <>
-      <span className={className}>
-        <MathText text={firstLine} />
-      </span>
-      {rest.length > 0 && (
-        <span className={continuationClassName ?? 'block'} style={continuationStyle}>
-          {rest.map((line, index) => (
-            <React.Fragment key={`${line}-${index}`}>
-              {index > 0 && <br />}
-              <MathText text={line} className={className} />
-            </React.Fragment>
-          ))}
-        </span>
-      )}
-    </>
+    <span
+      className="flex h-6 w-7 shrink-0 items-center justify-center rounded font-bold"
+      style={{
+        backgroundColor: PREVIEW_COLORS.subduedSurface,
+        fontSize: `${sizePx}px`,
+        // Only ever force 'hidden' — never explicitly 'visible' — so this
+        // doesn't bleed through the hidden export-preview copies the same
+        // way A4Preview's ContinuationNumber used to (see that file).
+        ...(visible ? null : { visibility: 'hidden' as const }),
+      }}
+    >
+      {number}
+    </span>
   );
 }
 
@@ -146,67 +185,109 @@ function AnswerGrid({ rows, sizes }: Readonly<AnswerGridProps>) {
   );
 }
 
-function SolutionBlock({
-  row,
+/**
+ * Renders one answer-key fragment (either the "Ans: (letter)" line or the
+ * "Solution:" text). Each is its own flowable unit — like A4Preview's
+ * question fragments — so a long solution can flow into the next
+ * column/page, and its own text can be cut mid-paragraph via `textRange`
+ * (book-style reflow) instead of the whole solution jumping down whole.
+ */
+function AnswerFragmentBlock({
+  fragment,
+  fragmentId,
+  textRange,
   showEn,
   showHi,
   columns,
   fontSize,
+  sizes,
 }: Readonly<{
-  row: FlatAnswerRow;
+  fragment: FlatAnswerFragment;
+  fragmentId: string;
+  textRange?: TextRange;
   showEn: boolean;
   showHi: boolean;
   columns: ColumnCount;
   fontSize: number;
+  sizes: ReturnType<typeof getAnswerSizes>;
 }>) {
-  const hasSolution = row.solutionEn || row.solutionHi;
+  const { row } = fragment;
   const actualFontSize = columns === 1 ? fontSize : columns === 3 ? fontSize + 1 : fontSize + 2;
+  const isContinuationPiece = !!textRange && textRange.from > 0;
+  const hasSolution = !!(row.solutionEn || row.solutionHi);
+
+  const renderAnswer = () => (
+    <p style={{ fontSize: `${sizes.answerLabel}px` }}>
+      {!isContinuationPiece && <span className="font-semibold">Ans: </span>}
+      <span className="font-bold" style={{ color: PREVIEW_COLORS.successText }}>
+        {!isContinuationPiece && `(${row.letter}) `}
+        {renderMonoOrBilingualText(
+          showEn ? row.optionTextEn : undefined,
+          undefined,
+          row.hasMath,
+          textRange,
+          (node) => node,
+          (node) => node,
+        )}
+      </span>
+    </p>
+  );
+
+  const renderSolution = () => {
+    if (!hasSolution) {
+      return (
+        <p
+          className="mt-0.5 italic"
+          style={{ fontSize: `${sizes.noSolution}px`, color: PREVIEW_COLORS.mutedText }}
+        >
+          No solution provided
+        </p>
+      );
+    }
+    const { enText, hiText } = resolveDisplayText(showEn, showHi, row.solutionEn, row.solutionHi);
+    return (
+      <div style={{ color: PREVIEW_COLORS.tertiaryText }}>
+        {!isContinuationPiece && (
+          <span className="font-semibold" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+            Solution:{' '}
+          </span>
+        )}
+        {renderMonoOrBilingualText(
+          enText,
+          hiText,
+          row.hasMath,
+          textRange,
+          (node) => (
+            <span style={{ whiteSpace: 'pre-line' }}>{node}</span>
+          ),
+          (node) => (
+            <span
+              className="font-devanagari block mt-0.5"
+              style={{ whiteSpace: 'pre-line', fontSize: `${actualFontSize}px` }}
+            >
+              {node}
+            </span>
+          ),
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
-      className="break-inside-avoid pb-2.5 leading-snug"
+      className="break-inside-avoid leading-snug"
       style={{ fontSize: `${actualFontSize}px` }}
-      data-block-id={row.id}
+      data-fragment-id={fragmentId}
+      data-answer-id={row.id}
     >
       <div className="flex gap-1.5">
-        <span
-          className="flex h-6 w-7 shrink-0 items-center justify-center rounded text-[11px] font-bold"
-          style={{ backgroundColor: PREVIEW_COLORS.subduedSurface }}
-        >
-          {row.number}
-        </span>
+        <ContinuationBadge
+          number={row.number}
+          visible={fragment.showNumber && !isContinuationPiece}
+          sizePx={sizes.blockNumber}
+        />
         <div className="flex-1">
-          {row.letter && (
-            <p>
-              <span className="font-semibold">Ans: </span>
-              <span className="font-bold" style={{ color: PREVIEW_COLORS.successText }}>
-                ({row.letter}){row.optionTextEn ? ` ${row.optionTextEn}` : ''}
-              </span>
-            </p>
-          )}
-          {hasSolution ? (
-            <div className="mt-0.5" style={{ color: PREVIEW_COLORS.tertiaryText }}>
-              <span className="font-semibold" style={{ color: PREVIEW_COLORS.quaternaryText }}>
-                Solution:{' '}
-              </span>
-              {showEn && row.solutionEn && <InlineSolutionRun text={row.solutionEn} />}
-              {showHi && row.solutionHi && (
-                <InlineSolutionRun
-                  text={row.solutionHi}
-                  className="font-devanagari"
-                  continuationClassName="font-devanagari block mt-0.5"
-                  continuationStyle={{ fontSize: `${actualFontSize}px` }}
-                />
-              )}
-            </div>
-          ) : (
-            <p
-              className="mt-0.5 italic"
-              style={{ fontSize: '9px', color: PREVIEW_COLORS.mutedText }}
-            >
-              No solution provided
-            </p>
-          )}
+          {fragment.kind === 'answer' ? renderAnswer() : renderSolution()}
         </div>
       </div>
     </div>
@@ -218,6 +299,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
     const showHi = paper.metadata.language !== 'en';
     const showEn = paper.metadata.language !== 'hi';
     const sizes = getAnswerSizes(fontSize);
+    const footerBaseText = paper.metadata.footerText?.trim() || 'Test PDF';
 
     const rows: FlatAnswerRow[] = useMemo(() => {
       let n = 0;
@@ -238,18 +320,20 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             solutionHi: q.solutionHi,
             sectionTitleEn: qi === 0 ? section.titleEn : undefined,
             isFirstInSection: qi === 0,
+            hasMath: !!q.hasMath,
           });
         });
       });
       return out;
     }, [paper.sections]);
 
-    const blockIds = useMemo(() => rows.map((row) => row.id), [rows]);
-    const byId = useMemo(() => {
-      const m = new Map<string, FlatAnswerRow>();
-      rows.forEach((row) => m.set(row.id, row));
+    const fragments = useMemo(() => buildAnswerFragments(rows), [rows]);
+    const fragmentBlockIds = useMemo(() => fragments.map((f) => f.blockId), [fragments]);
+    const fragmentById = useMemo(() => {
+      const m = new Map<string, FlatAnswerFragment>();
+      fragments.forEach((f) => m.set(f.blockId, f));
       return m;
-    }, [rows]);
+    }, [fragments]);
 
     const rootRef = useRef<HTMLDivElement>(null!);
     const setRootRef = (node: HTMLDivElement | null) => {
@@ -258,15 +342,30 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
       else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
     };
 
-    const solutionPages = useRenderedColumnPagination(blockIds, rootRef, {
-      pageSelector: '[data-content-page="true"]',
-      footerSelector: '[data-page-footer="true"]',
-      columnSelector: '[data-flow-column="true"]',
-      blockAttr: 'data-block-id',
-      columns,
-      active: active && !hideSolutions,
-      resetKey: `${columns}-${fontSize}-${paper.metadata.language}-${hideSolutions ? 'grid-only' : 'with-solutions'}`,
-    });
+    const { pages: solutionPages, textRanges } = useRenderedColumnPagination(
+      fragmentBlockIds,
+      rootRef,
+      {
+        pageSelector: '[data-content-page="true"]',
+        footerSelector: '[data-page-footer="true"]',
+        columnSelector: '[data-flow-column="true"]',
+        blockAttr: 'data-fragment-id',
+        columns,
+        active: active && !hideSolutions,
+        resetKey: `${columns}-${fontSize}-${paper.metadata.language}-${hideSolutions ? 'grid-only' : 'with-solutions'}`,
+        // Solutions can run long, so let a solution that doesn't fully fit
+        // split mid-paragraph (book-style) instead of moving the whole
+        // solution to the next column/page — fills the column properly
+        // instead of leaving it mostly empty. (A4Preview intentionally does
+        // NOT do this — questions there always move whole.)
+        getSplitTextNode: (blockNode) => {
+          const el = blockNode.querySelector<HTMLElement>(`[${SPLITTABLE_TEXT_ATTR}]`);
+          if (!el || el.childNodes.length !== 1) return null;
+          const child = el.firstChild;
+          return child && child.nodeType === Node.TEXT_NODE ? (child as Text) : null;
+        },
+      },
+    );
 
     if (hideSolutions) {
       return (
@@ -290,31 +389,39 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
               className="mb-4 border-b-2 pb-2 text-center"
               style={{ borderColor: PREVIEW_COLORS.pageText }}
             >
-              <h1 className="text-base font-bold uppercase">Answer Key</h1>
+              <h1 className="font-bold uppercase" style={{ fontSize: `${sizes.pageTitle}px` }}>
+                Answer Key
+              </h1>
               {showEn && paper.metadata.organisation && (
                 <p
-                  className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
-                  style={{ color: PREVIEW_COLORS.quaternaryText }}
+                  className="mt-0.5 font-semibold uppercase tracking-wide"
+                  style={{
+                    color: PREVIEW_COLORS.quaternaryText,
+                    fontSize: `${sizes.organisation}px`,
+                  }}
                 >
                   {paper.metadata.organisation}
                 </p>
               )}
               {showHi && paper.metadata.organisationHi && (
                 <p
-                  className="font-devanagari text-[10.5px] font-semibold"
-                  style={{ color: PREVIEW_COLORS.quaternaryText }}
+                  className="font-devanagari font-semibold"
+                  style={{
+                    color: PREVIEW_COLORS.quaternaryText,
+                    fontSize: `${sizes.organisation}px`,
+                  }}
                 >
                   {paper.metadata.organisationHi}
                 </p>
               )}
               {showEn && paper.metadata.examTitle && (
-                <p className="text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+                <p style={{ color: PREVIEW_COLORS.tertiaryText, fontSize: `${sizes.examTitle}px` }}>
                   {paper.metadata.examTitle}
                 </p>
               )}
               <div
-                className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[9.5px]"
-                style={{ color: PREVIEW_COLORS.mutedText }}
+                className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5"
+                style={{ color: PREVIEW_COLORS.mutedText, fontSize: `${sizes.metaRow}px` }}
               >
                 {paper.metadata.examCode && <span>{paper.metadata.examCode}</span>}
                 {(paper.metadata.setCode || paper.metadata.bookletSeries) && (
@@ -341,10 +448,10 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
 
             <div
               data-page-footer="true"
-              className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
-              style={{ color: PREVIEW_COLORS.mutedText }}
+              className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9"
+              style={{ color: PREVIEW_COLORS.mutedText, fontSize: `${sizes.footer}px` }}
             >
-              <span>Test PDF - Answer Key</span>
+              <span>{footerBaseText} - Answer Key</span>
               <span>Page 1 of 1</span>
             </div>
           </div>
@@ -377,39 +484,55 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   className="mb-4 border-b-2 pb-2 text-center"
                   style={{ borderColor: PREVIEW_COLORS.pageText }}
                 >
-                  <h1 className="text-base font-bold uppercase">Answer Key &amp; Solutions</h1>
+                  <h1 className="font-bold uppercase" style={{ fontSize: `${sizes.pageTitle}px` }}>
+                    Answer Key &amp; Solutions
+                  </h1>
                   {showEn && paper.metadata.organisation && (
                     <p
-                      className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
-                      style={{ color: PREVIEW_COLORS.quaternaryText }}
+                      className="mt-0.5 font-semibold uppercase tracking-wide"
+                      style={{
+                        color: PREVIEW_COLORS.quaternaryText,
+                        fontSize: `${sizes.organisation}px`,
+                      }}
                     >
                       {paper.metadata.organisation}
                     </p>
                   )}
                   {showHi && paper.metadata.organisationHi && (
                     <p
-                      className="font-devanagari text-[10.5px] font-semibold"
-                      style={{ color: PREVIEW_COLORS.quaternaryText }}
+                      className="font-devanagari font-semibold"
+                      style={{
+                        color: PREVIEW_COLORS.quaternaryText,
+                        fontSize: `${sizes.organisation}px`,
+                      }}
                     >
                       {paper.metadata.organisationHi}
                     </p>
                   )}
                   {showEn && paper.metadata.examTitle && (
-                    <p className="text-[12px]" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+                    <p
+                      style={{
+                        color: PREVIEW_COLORS.tertiaryText,
+                        fontSize: `${sizes.examTitle}px`,
+                      }}
+                    >
                       {paper.metadata.examTitle}
                     </p>
                   )}
                   {showHi && paper.metadata.examTitleHi && (
                     <p
-                      className="font-devanagari text-[12px]"
-                      style={{ color: PREVIEW_COLORS.tertiaryText }}
+                      className="font-devanagari"
+                      style={{
+                        color: PREVIEW_COLORS.tertiaryText,
+                        fontSize: `${sizes.examTitle}px`,
+                      }}
                     >
                       {paper.metadata.examTitleHi}
                     </p>
                   )}
                   <div
-                    className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[9.5px]"
-                    style={{ color: PREVIEW_COLORS.mutedText }}
+                    className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5"
+                    style={{ color: PREVIEW_COLORS.mutedText, fontSize: `${sizes.metaRow}px` }}
                   >
                     {paper.metadata.examCode && <span>{paper.metadata.examCode}</span>}
                     {(paper.metadata.setCode || paper.metadata.bookletSeries) && (
@@ -435,10 +558,11 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                 <AnswerGrid rows={rows} sizes={sizes} />
 
                 <div
-                  className="mb-3 border-b pb-1 text-[10px] font-bold uppercase tracking-widest"
+                  className="mb-3 border-b pb-1 font-bold uppercase tracking-widest"
                   style={{
                     borderColor: PREVIEW_COLORS.ruleStrong,
                     color: PREVIEW_COLORS.quaternaryText,
+                    fontSize: `${sizes.sectionHeader}px`,
                   }}
                 >
                   Solutions
@@ -448,8 +572,11 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
 
             {pageIndex > 0 && (
               <div
-                className="mb-3 flex items-center justify-between border-b pb-1 text-[10px] font-medium"
-                style={{ borderColor: PREVIEW_COLORS.ruleStrong }}
+                className="mb-3 flex items-center justify-between border-b pb-1 font-medium"
+                style={{
+                  borderColor: PREVIEW_COLORS.ruleStrong,
+                  fontSize: `${sizes.runningHeader}px`,
+                }}
               >
                 <span>Solutions - {paper.metadata.examTitle}</span>
                 <span>{paper.metadata.examCode}</span>
@@ -465,34 +592,45 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   style={{ width: COLUMN_MEASURE_WIDTHS[columns], flex: '0 0 auto' }}
                 >
                   {columnIds.map((id) => {
-                    const row = byId.get(id);
-                    if (!row) return null;
+                    const textRange = textRanges.get(id);
+                    const fragment = fragmentById.get(id) ?? fragmentById.get(rootFragmentId(id));
+                    if (!fragment) return null;
+                    const { row } = fragment;
+                    // A continuation piece never repeats the section header
+                    // that already ran before this row's first fragment.
+                    const isFirstPiece = !textRange || textRange.from === 0;
 
                     return (
                       <React.Fragment key={id}>
-                        {row.isFirstInSection && row.sectionTitleEn && (
-                          <div
-                            style={{
-                              borderBottom: `1px solid ${PREVIEW_COLORS.ruleSoft}`,
-                              color: PREVIEW_COLORS.quaternaryText,
-                              marginTop: '6px',
-                              marginBottom: '6px',
-                              paddingBottom: '2px',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.05em',
-                            }}
-                          >
-                            {row.sectionTitleEn}
-                          </div>
-                        )}
-                        <SolutionBlock
-                          row={row}
+                        {isFirstPiece &&
+                          fragment.showNumber &&
+                          row.isFirstInSection &&
+                          row.sectionTitleEn && (
+                            <div
+                              style={{
+                                borderBottom: `1px solid ${PREVIEW_COLORS.ruleSoft}`,
+                                color: PREVIEW_COLORS.quaternaryText,
+                                marginTop: '6px',
+                                marginBottom: '6px',
+                                paddingBottom: '2px',
+                                fontSize: `${sizes.sectionHeader}px`,
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                              }}
+                            >
+                              {row.sectionTitleEn}
+                            </div>
+                          )}
+                        <AnswerFragmentBlock
+                          fragment={fragment}
+                          fragmentId={id}
+                          textRange={textRange}
                           showEn={showEn}
                           showHi={showHi}
                           columns={columns}
                           fontSize={fontSize}
+                          sizes={sizes}
                         />
                       </React.Fragment>
                     );
@@ -503,10 +641,10 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
 
             <div
               data-page-footer="true"
-              className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
-              style={{ color: PREVIEW_COLORS.mutedText }}
+              className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9"
+              style={{ color: PREVIEW_COLORS.mutedText, fontSize: `${sizes.footer}px` }}
             >
-              <span>Test PDF - Answer Key</span>
+              <span>{footerBaseText} - Answer Key</span>
               <span>
                 Page {pageIndex + 1} of {solutionPages.length}
               </span>

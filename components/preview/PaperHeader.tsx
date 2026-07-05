@@ -5,12 +5,36 @@ import React from 'react';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { ExamMetadata } from '@/types/exam';
 
+const FONT_BASE = 11;
+
+function getHeaderSizes(metadata: ExamMetadata) {
+  const overrides = metadata.headerFontSizes ?? {};
+  return {
+    org: overrides.organisation ?? 15,
+    orgCompact: Math.max(10, (overrides.organisation ?? 15) - 4),
+    examTitle: overrides.title ?? 18,
+    examTitleHi: Math.max(15, (overrides.title ?? 18) - 1),
+    meta: overrides.meta ?? 12.5,
+    metaCompact: Math.max(9, (overrides.meta ?? 12.5) - 2.5),
+    candidate: Math.max(10, (overrides.meta ?? 12.5) - 1),
+    note: Math.max(9, (overrides.meta ?? 12.5) - 2.5),
+    instructionTitle: Math.max(11.5, (overrides.instructions ?? 11.5) + 1),
+    instructionBody: overrides.instructions ?? 11.5,
+    footer: overrides.footer ?? 12,
+    coachingBadge: Math.max(14, (overrides.meta ?? 12.5) + 3),
+    coachingTitleHi: Math.max(16, overrides.title ?? 18),
+    coachingTitleEn: Math.max(12, (overrides.title ?? 18) - 4),
+    coachingBar: Math.max(9, (overrides.meta ?? 12.5) - 2.5),
+  };
+}
+
 // ─────────────────────────────────────────────────────────
 //  Template: "classic"  (SSC / UPSC style — original)
 // ─────────────────────────────────────────────────────────
-function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
+function ClassicHeader({ metadata, fontSize }: { metadata: ExamMetadata; fontSize: number }) {
   const showHi = metadata.language !== 'en';
   const showEn = metadata.language !== 'hi';
+  const sizes = getHeaderSizes(metadata);
 
   return (
     <div className="select-none border-b-2 pb-2" style={{ borderColor: PREVIEW_COLORS.pageText }}>
@@ -22,18 +46,24 @@ function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
           )}
           <div>
             {showEn && metadata.organisation && (
-              <p className="text-[15px] font-bold uppercase leading-tight tracking-wide">
+              <p
+                className="font-bold uppercase leading-tight tracking-wide"
+                style={{ fontSize: `${sizes.org}px` }}
+              >
                 {metadata.organisation}
               </p>
             )}
             {showHi && metadata.organisationHi && (
-              <p className="font-devanagari text-[15px] font-bold leading-tight">
+              <p
+                className="font-devanagari font-bold leading-tight"
+                style={{ fontSize: `${sizes.org}px` }}
+              >
                 {metadata.organisationHi}
               </p>
             )}
           </div>
         </div>
-        <div className="text-right text-[10px] leading-tight">
+        <div className="text-right leading-tight" style={{ fontSize: `${sizes.metaCompact}px` }}>
           {metadata.examCode && <p className="font-semibold">{metadata.examCode}</p>}
           {metadata.setCode && (
             <p
@@ -49,16 +79,20 @@ function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
 
       <div className="mt-2 text-center">
         {showEn && metadata.examTitle && (
-          <h1 className="text-[17px] font-bold uppercase">{metadata.examTitle}</h1>
+          <h1 className="font-bold uppercase" style={{ fontSize: `${sizes.examTitle}px` }}>
+            {metadata.examTitle}
+          </h1>
         )}
         {showHi && metadata.examTitleHi && (
-          <h2 className="font-devanagari text-[16px] font-bold">{metadata.examTitleHi}</h2>
+          <h2 className="font-devanagari font-bold" style={{ fontSize: `${sizes.examTitleHi}px` }}>
+            {metadata.examTitleHi}
+          </h2>
         )}
       </div>
 
       <div
-        className="mt-2 flex items-center justify-between border-y py-1 text-[12.5px] font-medium"
-        style={{ borderColor: PREVIEW_COLORS.ruleBold }}
+        className="mt-2 flex items-center justify-between border-y py-1 font-medium"
+        style={{ borderColor: PREVIEW_COLORS.ruleBold, fontSize: `${sizes.meta}px` }}
       >
         <span>
           Time: <strong>{metadata.duration}</strong>
@@ -72,9 +106,11 @@ function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
       </div>
 
       {(metadata.rollNoLabel || metadata.candidateNameLabel) && (
-        <CandidateFields metadata={metadata} />
+        <CandidateFields metadata={metadata} fontSize={fontSize} />
       )}
-      {metadata.negativeMarking?.enabled && <NegMarkingNote metadata={metadata} />}
+      {metadata.negativeMarking?.enabled && (
+        <NegMarkingNote metadata={metadata} fontSize={fontSize} />
+      )}
     </div>
   );
 }
@@ -84,9 +120,10 @@ function ClassicHeader({ metadata }: { metadata: ExamMetadata }) {
 //  Circle-number badge + bold title box + brand subbar
 //  Page footer bar rendered separately via CoachingPageFooter
 // ─────────────────────────────────────────────────────────
-function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
+function CoachingHeader({ metadata, fontSize }: { metadata: ExamMetadata; fontSize: number }) {
   const showHi = metadata.language !== 'en';
   const showEn = metadata.language !== 'hi';
+  const sizes = getHeaderSizes(metadata);
 
   // Circle badge shows coachingSetNumber if set, else falls back to setCode, else '01'
   const badgeNum = (metadata.coachingSetNumber ?? metadata.setCode ?? '01')
@@ -109,12 +146,13 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
           style={{ width: 58, backgroundColor: brandColor }}
         >
           <span
-            className="flex items-center justify-center rounded-full border-2 text-[16px] font-extrabold"
+            className="flex items-center justify-center rounded-full border-2 font-extrabold"
             style={{
               width: 38,
               height: 38,
               borderColor: PREVIEW_COLORS.pageBackground,
               color: PREVIEW_COLORS.pageBackground,
+              fontSize: `${sizes.coachingBadge}px`,
             }}
           >
             {badgeNum}
@@ -127,12 +165,18 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
           <div className="flex flex-1 items-center justify-between px-3 py-2">
             <div>
               {showHi && metadata.examTitleHi && (
-                <h1 className="font-devanagari text-[18px] font-extrabold leading-tight">
+                <h1
+                  className="font-devanagari font-extrabold leading-tight"
+                  style={{ fontSize: `${sizes.coachingTitleHi}px` }}
+                >
                   {metadata.examTitleHi}
                 </h1>
               )}
               {showEn && metadata.examTitle && (
-                <p className="text-[14px] font-bold uppercase leading-tight opacity-70">
+                <p
+                  className="font-bold uppercase leading-tight opacity-70"
+                  style={{ fontSize: `${sizes.coachingTitleEn}px` }}
+                >
                   {metadata.examTitle}
                 </p>
               )}
@@ -146,8 +190,12 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
           {/* Header brand subbar — sits flush at the bottom of the box */}
           {headerBrandText && (
             <div
-              className="flex items-center justify-between px-3 py-0.5 text-[10px] font-semibold"
-              style={{ backgroundColor: brandColor, color: '#fff' }}
+              className="flex items-center justify-between px-3 py-0.5 font-semibold"
+              style={{
+                backgroundColor: brandColor,
+                color: '#fff',
+                fontSize: `${sizes.coachingBar}px`,
+              }}
             >
               <span style={{ fontFamily: 'var(--font-devanagari, inherit)' }}>
                 {headerBrandText}
@@ -167,8 +215,8 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
 
       {/* ── Meta info row ──────────────────────────────── */}
       <div
-        className="mt-1.5 flex items-center justify-between border-b pb-1 text-[12px] font-medium"
-        style={{ borderColor: PREVIEW_COLORS.ruleBold }}
+        className="mt-1.5 flex items-center justify-between border-b pb-1 font-medium"
+        style={{ borderColor: PREVIEW_COLORS.ruleBold, fontSize: `${sizes.meta}px` }}
       >
         <span>
           {showEn && metadata.organisation && (
@@ -198,9 +246,11 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
 
       {/* Candidate fields only if explicitly re-enabled */}
       {(metadata.rollNoLabel || metadata.candidateNameLabel) && (
-        <CandidateFields metadata={metadata} />
+        <CandidateFields metadata={metadata} fontSize={fontSize} />
       )}
-      {metadata.negativeMarking?.enabled && <NegMarkingNote metadata={metadata} />}
+      {metadata.negativeMarking?.enabled && (
+        <NegMarkingNote metadata={metadata} fontSize={fontSize} />
+      )}
     </div>
   );
 }
@@ -208,9 +258,10 @@ function CoachingHeader({ metadata }: { metadata: ExamMetadata }) {
 // ─────────────────────────────────────────────────────────
 //  Template: "minimal"  (Clean modern / magazine style)
 // ─────────────────────────────────────────────────────────
-function MinimalHeader({ metadata }: { metadata: ExamMetadata }) {
+function MinimalHeader({ metadata, fontSize }: { metadata: ExamMetadata; fontSize: number }) {
   const showHi = metadata.language !== 'en';
   const showEn = metadata.language !== 'hi';
+  const sizes = getHeaderSizes(metadata);
 
   return (
     <div className="select-none pb-2">
@@ -232,18 +283,24 @@ function MinimalHeader({ metadata }: { metadata: ExamMetadata }) {
           )}
           <div>
             {showEn && metadata.organisation && (
-              <p className="text-[11px] font-semibold uppercase tracking-widest leading-tight">
+              <p
+                className="font-semibold uppercase tracking-widest leading-tight"
+                style={{ fontSize: `${sizes.orgCompact}px` }}
+              >
                 {metadata.organisation}
               </p>
             )}
             {showHi && metadata.organisationHi && (
-              <p className="font-devanagari text-[11px] font-semibold leading-tight">
+              <p
+                className="font-devanagari font-semibold leading-tight"
+                style={{ fontSize: `${sizes.orgCompact}px` }}
+              >
                 {metadata.organisationHi}
               </p>
             )}
           </div>
         </div>
-        <div className="text-right text-[9.5px] leading-snug">
+        <div className="text-right leading-snug" style={{ fontSize: `${sizes.metaCompact}px` }}>
           {metadata.examCode && (
             <p className="font-mono font-semibold tracking-wide">{metadata.examCode}</p>
           )}
@@ -262,12 +319,18 @@ function MinimalHeader({ metadata }: { metadata: ExamMetadata }) {
 
       <div className="text-center">
         {showEn && metadata.examTitle && (
-          <h1 className="text-[16px] font-extrabold uppercase tracking-wide leading-tight">
+          <h1
+            className="font-extrabold uppercase tracking-wide leading-tight"
+            style={{ fontSize: `${sizes.examTitleHi}px` }}
+          >
             {metadata.examTitle}
           </h1>
         )}
         {showHi && metadata.examTitleHi && (
-          <h2 className="font-devanagari text-[15px] font-bold leading-tight">
+          <h2
+            className="font-devanagari font-bold leading-tight"
+            style={{ fontSize: `${sizes.org}px` }}
+          >
             {metadata.examTitleHi}
           </h2>
         )}
@@ -275,7 +338,10 @@ function MinimalHeader({ metadata }: { metadata: ExamMetadata }) {
 
       <div className="my-1.5 h-px" style={{ backgroundColor: PREVIEW_COLORS.ruleBold }} />
 
-      <div className="flex items-center justify-center gap-5 text-[12px]">
+      <div
+        className="flex items-center justify-center gap-5"
+        style={{ fontSize: `${sizes.meta}px` }}
+      >
         <span className="flex items-center gap-1">
           <span style={{ color: PREVIEW_COLORS.mutedText }}>⏱</span>
           <strong>{metadata.duration}</strong>
@@ -302,9 +368,11 @@ function MinimalHeader({ metadata }: { metadata: ExamMetadata }) {
       />
 
       {(metadata.rollNoLabel || metadata.candidateNameLabel) && (
-        <CandidateFields metadata={metadata} />
+        <CandidateFields metadata={metadata} fontSize={fontSize} />
       )}
-      {metadata.negativeMarking?.enabled && <NegMarkingNote metadata={metadata} />}
+      {metadata.negativeMarking?.enabled && (
+        <NegMarkingNote metadata={metadata} fontSize={fontSize} />
+      )}
     </div>
   );
 }
@@ -318,13 +386,16 @@ export function CoachingPageFooter({
   metadata,
   pageNumber,
   totalPages,
+  fontSize = FONT_BASE,
 }: {
   metadata: ExamMetadata;
   pageNumber: number;
   totalPages: number;
+  fontSize?: number;
 }) {
   const brandColor = metadata.footerBrandColor ?? '#1a1a1a';
   const footerText = metadata.footerBrandText ?? '';
+  const sizes = getHeaderSizes(metadata);
 
   return (
     <div
@@ -334,16 +405,26 @@ export function CoachingPageFooter({
     >
       {/* Left dark block — mirrors the header circle badge width */}
       <div
-        className="flex shrink-0 items-center justify-center text-[9px] font-bold"
-        style={{ width: 58, backgroundColor: brandColor, color: '#fff', minHeight: 22 }}
+        className="flex shrink-0 items-center justify-center font-bold"
+        style={{
+          width: 58,
+          backgroundColor: brandColor,
+          color: '#fff',
+          minHeight: 22,
+          fontSize: `${sizes.footer}px`,
+        }}
       >
         {pageNumber}
       </div>
 
       {/* Centre: institute / channel name */}
       <div
-        className="flex flex-1 items-center px-3 text-[9px] font-semibold"
-        style={{ backgroundColor: brandColor, color: '#fff' }}
+        className="flex flex-1 items-center px-3 font-semibold"
+        style={{
+          backgroundColor: brandColor,
+          color: '#fff',
+          fontSize: `${sizes.footer}px`,
+        }}
       >
         {footerText && (
           <span style={{ fontFamily: 'var(--font-devanagari, inherit)' }}>{footerText}</span>
@@ -353,12 +434,13 @@ export function CoachingPageFooter({
 
       {/* Right: page number */}
       <div
-        className="flex shrink-0 items-center justify-center border-l-2 px-3 text-[9px] font-bold"
+        className="flex shrink-0 items-center justify-center border-l-2 px-3 font-bold"
         style={{
           borderColor: 'rgba(255,255,255,0.25)',
           backgroundColor: brandColor,
           color: '#fff',
           minHeight: 22,
+          fontSize: `${sizes.footer}px`,
         }}
       >
         {pageNumber}/{totalPages}
@@ -370,9 +452,16 @@ export function CoachingPageFooter({
 // ─────────────────────────────────────────────────────────
 //  Shared sub-components
 // ─────────────────────────────────────────────────────────
-function CandidateFields({ metadata }: { metadata: ExamMetadata }) {
+function CandidateFields({
+  metadata,
+  fontSize = FONT_BASE,
+}: {
+  metadata: ExamMetadata;
+  fontSize?: number;
+}) {
+  const sizes = getHeaderSizes(metadata);
   return (
-    <div className="mt-2 flex items-center gap-3 text-[11.5px]">
+    <div className="mt-2 flex items-center gap-3" style={{ fontSize: `${sizes.candidate}px` }}>
       {metadata.rollNoLabel && (
         <div className="flex items-center gap-1.5">
           <span className="font-semibold">Roll No.</span>
@@ -400,10 +489,17 @@ function CandidateFields({ metadata }: { metadata: ExamMetadata }) {
   );
 }
 
-function NegMarkingNote({ metadata }: { metadata: ExamMetadata }) {
+function NegMarkingNote({
+  metadata,
+  fontSize = FONT_BASE,
+}: {
+  metadata: ExamMetadata;
+  fontSize?: number;
+}) {
   const showHi = metadata.language !== 'en';
+  const sizes = getHeaderSizes(metadata);
   return (
-    <p className="mt-1.5 text-center text-[10px] font-medium italic">
+    <p className="mt-1.5 text-center font-medium italic" style={{ fontSize: `${sizes.note}px` }}>
       Note: {metadata.negativeMarking!.value} marks will be deducted for each wrong answer.
       {showHi && (
         <span className="font-devanagari">
@@ -418,36 +514,49 @@ function NegMarkingNote({ metadata }: { metadata: ExamMetadata }) {
 // ─────────────────────────────────────────────────────────
 //  Main router export
 // ─────────────────────────────────────────────────────────
-export function PaperHeader({ metadata }: Readonly<{ metadata: ExamMetadata }>) {
+export function PaperHeader({
+  metadata,
+  fontSize = FONT_BASE,
+}: Readonly<{ metadata: ExamMetadata; fontSize?: number }>) {
   const tpl = metadata.headerTemplate ?? 'classic';
-  if (tpl === 'coaching') return <CoachingHeader metadata={metadata} />;
-  if (tpl === 'minimal') return <MinimalHeader metadata={metadata} />;
-  return <ClassicHeader metadata={metadata} />;
+  if (tpl === 'coaching') return <CoachingHeader metadata={metadata} fontSize={fontSize} />;
+  if (tpl === 'minimal') return <MinimalHeader metadata={metadata} fontSize={fontSize} />;
+  return <ClassicHeader metadata={metadata} fontSize={fontSize} />;
 }
 
-export function InstructionsBlock({ metadata }: Readonly<{ metadata: ExamMetadata }>) {
+export function InstructionsBlock({
+  metadata,
+  fontSize = FONT_BASE,
+}: Readonly<{ metadata: ExamMetadata; fontSize?: number }>) {
   const showHi = metadata.language !== 'en';
   const showEn = metadata.language !== 'hi';
+  const sizes = getHeaderSizes(metadata);
 
   const enabled = metadata.generalInstructionsEnabled ?? true;
   if (!enabled || metadata.generalInstructions.length === 0) return null;
 
   return (
     <div
-      className="mt-2 border p-2 text-[10px] leading-snug"
-      style={{ borderColor: PREVIEW_COLORS.ruleBold }}
+      className="mt-2 border p-2 leading-snug"
+      style={{ borderColor: PREVIEW_COLORS.ruleBold, fontSize: `${sizes.instructionBody}px` }}
     >
-      <p className="mb-1 text-center text-[11.5px] font-bold uppercase">
+      <p
+        className="mb-1 text-center font-bold uppercase"
+        style={{ fontSize: `${sizes.instructionTitle}px` }}
+      >
         General Instructions{showHi ? ' / सामान्य निर्देश' : ''}
       </p>
       <ol className="list-decimal space-y-0.5 pl-4">
         {metadata.generalInstructions.map((ins, i) => (
           <li key={i}>
-            {showEn && <span className="text-[10.5px]">{ins}</span>}
+            {showEn && <span style={{ fontSize: `${sizes.instructionBody}px` }}>{ins}</span>}
             {showHi && metadata.generalInstructionsHi?.[i] && (
               <span
-                className="font-devanagari block text-[10.5px]"
-                style={{ color: PREVIEW_COLORS.quaternaryText }}
+                className="font-devanagari block"
+                style={{
+                  color: PREVIEW_COLORS.quaternaryText,
+                  fontSize: `${sizes.instructionBody}px`,
+                }}
               >
                 {metadata.generalInstructionsHi[i]}
               </span>
