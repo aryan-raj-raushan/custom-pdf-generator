@@ -474,12 +474,15 @@ function formatDate(iso: string) {
 // ─────────────────────────────────────────────────────────
 export function HeaderBanner({ imageUrl }: Readonly<{ imageUrl: string }>) {
   return (
-    <div className="mb-2 w-full select-none overflow-hidden">
+    <div
+      className="mb-2 w-full select-none overflow-hidden"
+      style={{ height: 393, maxHeight: 393 }}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
         alt="Exam header"
-        style={{ width: '100%', display: 'block', objectFit: 'contain' }}
+        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
       />
     </div>
   );

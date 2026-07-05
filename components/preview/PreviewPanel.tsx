@@ -29,6 +29,15 @@ interface PreviewPanelProps {
   onFontSizeChange?: (fontSize: number) => void;
   highlightedPreviewRef: React.RefObject<HTMLDivElement>;
   answerGridOnlyRef: React.RefObject<HTMLDivElement>;
+  reviewState: {
+    paperReviewed: boolean;
+    answerKeyReviewed: boolean;
+    bypassed: boolean;
+  };
+  reviewResetKey: string;
+  onConfirmPaperReview: () => void;
+  onConfirmAnswerKeyReview: () => void;
+  onBypassReview: () => void;
 }
 
 const ZOOM_STEPS = [0.5, 0.6, 0.75, 0.85, 1];
@@ -53,9 +62,17 @@ export function PreviewPanel({
   onFontSizeChange,
   highlightedPreviewRef,
   answerGridOnlyRef,
+  reviewState,
+  reviewResetKey,
+  onConfirmPaperReview,
+  onConfirmAnswerKeyReview,
+  onBypassReview,
 }: Readonly<PreviewPanelProps>) {
   const [zoomIndex, setZoomIndex] = useState(2); // default 0.75
   const [mode, setMode] = useState<'paper' | 'answerKey'>('paper');
+  const [paperReachedEnd, setPaperReachedEnd] = useState(false);
+  const [answerKeyReachedEnd, setAnswerKeyReachedEnd] = useState(false);
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
   const [columns, setColumns] = useState<ColumnCount>((paper.metadata.columns ?? 2) as ColumnCount);
 
@@ -72,7 +89,15 @@ export function PreviewPanel({
     setFontSize(paper.metadata.fontSize ?? FONT_SIZE_DEFAULT);
   }, [paper.metadata.fontSize]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPaperReachedEnd(false);
+    setAnswerKeyReachedEnd(false);
+  }, [reviewResetKey]);
+
   const zoom = ZOOM_STEPS[zoomIndex];
+  const totalQuestions = paper.sections.reduce((sum, section) => sum + section.questions.length, 0);
+  const lastQuestionNumber = totalQuestions;
 
   function handleColumnsChange(value: ColumnCount) {
     setColumns(value);
@@ -110,6 +135,30 @@ export function PreviewPanel({
     requestAnimationFrame(tryScroll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jumpToken]);
+
+  useEffect(() => {
+    const el = scrollAreaRef.current;
+    if (!el) return;
+
+    const checkReachedEnd = () => {
+      const activeRoot = mode === 'paper' ? previewRef.current : answerKeyRef.current;
+      const pageCount = activeRoot?.querySelectorAll('[data-content-page="true"]').length ?? 0;
+      if (pageCount === 0) return;
+
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+      if (!atBottom) return;
+
+      if (mode === 'paper') setPaperReachedEnd(true);
+      else setAnswerKeyReachedEnd(true);
+    };
+
+    checkReachedEnd();
+    el.addEventListener('scroll', checkReachedEnd, { passive: true });
+    return () => el.removeEventListener('scroll', checkReachedEnd);
+  }, [mode, previewRef, answerKeyRef, reviewResetKey]);
+
+  const reviewComplete =
+    reviewState.bypassed || (reviewState.paperReviewed && reviewState.answerKeyReviewed);
 
   return (
     <div className="flex h-full flex-col bg-stone-100">
@@ -226,8 +275,81 @@ export function PreviewPanel({
         </div>
       </div>
 
+      <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-2 text-xs">
+        <div className="flex items-center gap-3 text-stone-600">
+          <span
+            className={
+              reviewState.paperReviewed ? 'font-semibold text-green-700' : 'text-stone-500'
+            }
+          >
+            Paper:{' '}
+            {reviewState.paperReviewed
+              ? 'Reviewed'
+              : paperReachedEnd
+                ? 'Ready to confirm'
+                : 'Scroll to end'}
+          </span>
+          <span
+            className={
+              reviewState.answerKeyReviewed ? 'font-semibold text-green-700' : 'text-stone-500'
+            }
+          >
+            Answer key:{' '}
+            {reviewState.answerKeyReviewed
+              ? 'Reviewed'
+              : answerKeyReachedEnd
+                ? 'Ready to confirm'
+                : 'Scroll to end'}
+          </span>
+          <span className={reviewComplete ? 'font-semibold text-green-700' : 'text-amber-700'}>
+            {reviewComplete ? 'Save/export unlocked' : 'Review required before save/export'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {!reviewComplete && totalQuestions > 0 && (
+            <span className="max-w-[360px] text-right text-[11px] leading-snug text-stone-500">
+              Cross-check imported count before confirming:
+              {` ${totalQuestions} question${totalQuestions === 1 ? '' : 's'} total, last question should be ${lastQuestionNumber} in both paper and answer key.`}
+            </span>
+          )}
+          {mode === 'paper' &&
+            paperReachedEnd &&
+            !reviewState.paperReviewed &&
+            !reviewState.bypassed && (
+              <button
+                type="button"
+                onClick={onConfirmPaperReview}
+                className="rounded-md border border-stone-300 bg-white px-2.5 py-1 font-medium text-stone-700 hover:bg-stone-100"
+              >
+                Confirm paper review
+              </button>
+            )}
+          {mode === 'answerKey' &&
+            answerKeyReachedEnd &&
+            !reviewState.answerKeyReviewed &&
+            !reviewState.bypassed && (
+              <button
+                type="button"
+                onClick={onConfirmAnswerKeyReview}
+                className="rounded-md border border-stone-300 bg-white px-2.5 py-1 font-medium text-stone-700 hover:bg-stone-100"
+              >
+                Confirm answer key review
+              </button>
+            )}
+          {!reviewComplete && (
+            <button
+              type="button"
+              onClick={onBypassReview}
+              className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-800 hover:bg-amber-100"
+            >
+              Bypass review
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Preview area */}
-      <div className="relative flex-1 overflow-auto px-8 py-8">
+      <div ref={scrollAreaRef} className="relative flex-1 overflow-auto px-8 py-8">
         {/* Hidden: highlighted-answer question paper, used only for export */}
         <div
           style={{

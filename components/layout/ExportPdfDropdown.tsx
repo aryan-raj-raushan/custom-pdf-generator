@@ -17,9 +17,11 @@ interface ExportPdfDropdownProps {
   highlightedPreviewRef: React.RefObject<HTMLDivElement>; // NEW
   answerGridOnlyRef: React.RefObject<HTMLDivElement>; // NEW
   fileName: string;
+  disabled?: boolean;
 }
 
 type ExportKind = 'combined' | 'paper' | 'answerKey' | 'highlighted';
+type ExportKindExtended = ExportKind | 'paperWithAnswerKey';
 
 export function ExportPdfDropdown({
   previewRef,
@@ -27,9 +29,10 @@ export function ExportPdfDropdown({
   fileName,
   highlightedPreviewRef,
   answerGridOnlyRef,
+  disabled = false,
 }: Readonly<ExportPdfDropdownProps>) {
   const [open, setOpen] = useState(false);
-  const [exporting, setExporting] = useState<ExportKind | null>(null);
+  const [exporting, setExporting] = useState<ExportKindExtended | null>(null);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +47,7 @@ export function ExportPdfDropdown({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [open]);
 
-  async function runExport(kind: ExportKind) {
+  async function runExport(kind: ExportKindExtended) {
     setOpen(false);
     if (exporting) return;
     setExporting(kind);
@@ -59,6 +62,12 @@ export function ExportPdfDropdown({
       if (kind === 'combined') {
         if (!previewRef.current || !answerKeyRef.current) return;
         await exportCombinedPreviewToPdf(previewRef.current, answerKeyRef.current, {
+          fileName: `${fileName}-with-solutions`,
+          onProgress: setProgress,
+        });
+      } else if (kind === 'paperWithAnswerKey') {
+        if (!previewRef.current || !answerGridOnlyRef.current) return;
+        await exportCombinedPreviewToPdf(previewRef.current, answerGridOnlyRef.current, {
           fileName: `${fileName}-with-answer-key`,
           onProgress: setProgress,
         });
@@ -93,7 +102,11 @@ export function ExportPdfDropdown({
 
   return (
     <div className="relative" ref={menuRef}>
-      <Button variant="secondary" onClick={() => setOpen((o) => !o)} disabled={exporting !== null}>
+      <Button
+        variant="secondary"
+        onClick={() => setOpen((o) => !o)}
+        disabled={exporting !== null || disabled}
+      >
         {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
         Export PDF
         <ChevronDown size={14} />
@@ -107,9 +120,22 @@ export function ExportPdfDropdown({
           >
             <FileStack size={14} />
             <span>
-              Export PDF + answer key
+              Export questions + solutions
               <span className="block text-[11px] font-normal text-stone-400">
-                Single file, question paper then answers
+                Single file, question paper then answer key with solutions
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => runExport('paperWithAnswerKey')}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-900 hover:bg-stone-100"
+          >
+            <FileStack size={14} />
+            <span>
+              Export questions + answer key
+              <span className="block text-[11px] font-normal text-stone-400">
+                Question paper + answer key without highlighted answers
               </span>
             </span>
           </button>

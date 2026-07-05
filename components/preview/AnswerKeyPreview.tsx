@@ -5,14 +5,14 @@ import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { MathText } from '@/lib/renderMath';
 import { ExamPaper } from '@/types/exam';
 import { ColumnCount, PageWatermark } from './A4Preview';
-import { useAutoPaginate, useOverflowCorrection } from '@/lib/usePagination';
+import { useRenderedColumnPagination } from '@/lib/usePagination';
 
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
   columns?: ColumnCount;
   fontSize?: number;
   active?: boolean;
-  hideSolutions?: boolean; // NEW
+  hideSolutions?: boolean;
 }
 
 interface FlatAnswerRow {
@@ -32,6 +32,19 @@ interface AnswerGridProps {
 }
 
 const FONT_BASE = 11;
+const A4_WIDTH_PX = 794;
+
+const COLUMN_MEASURE_WIDTHS: Record<ColumnCount, number> = {
+  1: 718,
+  2: 349,
+  3: 226,
+};
+
+const COLUMN_CONTAINER_STYLE: Record<ColumnCount, React.CSSProperties> = {
+  1: { display: 'flex', gap: 0 },
+  2: { display: 'flex', gap: 20 },
+  3: { display: 'flex', gap: 20 },
+};
 
 function getAnswerSizes(fontSize: number) {
   const delta = fontSize - FONT_BASE;
@@ -49,18 +62,35 @@ function getAnswerSizes(fontSize: number) {
   };
 }
 
-const A4_WIDTH_PX = 794;
+function InlineSolutionRun({
+  text,
+  className,
+  continuationClassName,
+}: Readonly<{
+  text: string;
+  className?: string;
+  continuationClassName?: string;
+}>) {
+  const [firstLine, ...rest] = text.split('\n');
+  return (
+    <>
+      <span className={className}>
+        <MathText text={firstLine} />
+      </span>
+      {rest.length > 0 && (
+        <span className={continuationClassName ?? 'block'}>
+          {rest.map((line, index) => (
+            <React.Fragment key={`${line}-${index}`}>
+              {index > 0 && <br />}
+              <MathText text={line} className={className} />
+            </React.Fragment>
+          ))}
+        </span>
+      )}
+    </>
+  );
+}
 
-// Inline grid styles — avoids Tailwind purging dynamic col-span/grid-cols classes
-const GRID_STYLE: Record<ColumnCount, React.CSSProperties> = {
-  1: { display: 'grid', gridTemplateColumns: '1fr' },
-  2: { display: 'grid', gridTemplateColumns: '1fr 1fr' },
-  3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' },
-};
-
-const COL_SPAN_ALL: React.CSSProperties = { gridColumn: '1 / -1' };
-
-// ─── Compact Answer Grid ──────────────────────────────────────────────────────
 function AnswerGrid({ rows, sizes }: Readonly<AnswerGridProps>) {
   const mcqRows = rows.filter((r) => r.letter);
   if (mcqRows.length === 0) return null;
@@ -76,7 +106,6 @@ function AnswerGrid({ rows, sizes }: Readonly<AnswerGridProps>) {
       >
         Answer Key
       </p>
-      {/* Always 10-column dense grid — just number + letter */}
       <div
         style={{
           display: 'grid',
@@ -115,30 +144,31 @@ function AnswerGrid({ rows, sizes }: Readonly<AnswerGridProps>) {
   );
 }
 
-// ─── Solution Block ───────────────────────────────────────────────────────────
-interface SolutionBlockProps {
+function SolutionBlock({
+  row,
+  showEn,
+  showHi,
+  columns,
+  fontSize,
+}: Readonly<{
   row: FlatAnswerRow;
   showEn: boolean;
   showHi: boolean;
   columns: ColumnCount;
   fontSize: number;
-}
-
-function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<SolutionBlockProps>) {
+}>) {
   const hasSolution = row.solutionEn || row.solutionHi;
   const actualFontSize = columns === 1 ? fontSize : columns === 3 ? fontSize + 1 : fontSize + 2;
 
   return (
     <div
       className="break-inside-avoid pb-2.5 leading-snug"
-      style={{
-        fontSize: `${actualFontSize}px`,
-      }}
+      style={{ fontSize: `${actualFontSize}px` }}
       data-block-id={row.id}
     >
       <div className="flex gap-1.5">
         <span
-          className="flex h-5 w-6 shrink-0 items-center justify-center rounded text-[9px] font-bold"
+          className="flex h-6 w-7 shrink-0 items-center justify-center rounded text-[11px] font-bold"
           style={{ backgroundColor: PREVIEW_COLORS.subduedSurface }}
         >
           {row.number}
@@ -153,22 +183,19 @@ function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<Solu
             </p>
           )}
           {hasSolution ? (
-            <p className="mt-0.5" style={{ color: PREVIEW_COLORS.tertiaryText }}>
+            <div className="mt-0.5" style={{ color: PREVIEW_COLORS.tertiaryText }}>
               <span className="font-semibold" style={{ color: PREVIEW_COLORS.quaternaryText }}>
                 Solution:{' '}
               </span>
-              {showEn && row.solutionEn && <MathText text={row.solutionEn} />}
+              {showEn && row.solutionEn && <InlineSolutionRun text={row.solutionEn} />}
               {showHi && row.solutionHi && (
-                <span
-                  style={{
-                    fontSize: `${actualFontSize}px`,
-                  }}
-                  className="font-devanagari mt-0.5 block text-[9.5px]"
-                >
-                  <MathText text={row.solutionHi} />
-                </span>
+                <InlineSolutionRun
+                  text={row.solutionHi}
+                  className="font-devanagari"
+                  continuationClassName="font-devanagari block mt-0.5 text-[9.5px]"
+                />
               )}
-            </p>
+            </div>
           ) : (
             <p
               className="mt-0.5 italic"
@@ -183,24 +210,10 @@ function SolutionBlock({ row, showEn, showHi, columns, fontSize }: Readonly<Solu
   );
 }
 
-// ─── Reserved heights ─────────────────────────────────────────────────────────
-const SOLUTIONS_RESERVED_FIRST: Record<ColumnCount, number> = {
-  1: 440,
-  2: 420,
-  3: 410,
-};
-const SOLUTIONS_RESERVED_OTHER: Record<ColumnCount, number> = {
-  1: 125,
-  2: 120,
-  3: 115,
-};
-
-// ─── Main export ──────────────────────────────────────────────────────────────
 export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPreviewProps>(
   ({ paper, columns = 2, fontSize = 11, active = true, hideSolutions = false }, ref) => {
     const showHi = paper.metadata.language !== 'en';
     const showEn = paper.metadata.language !== 'hi';
-
     const sizes = getAnswerSizes(fontSize);
 
     const rows: FlatAnswerRow[] = useMemo(() => {
@@ -228,60 +241,29 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
       return out;
     }, [paper.sections]);
 
-    const blockIds = rows.map((r) => r.id);
+    const blockIds = useMemo(() => rows.map((row) => row.id), [rows]);
     const byId = useMemo(() => {
       const m = new Map<string, FlatAnswerRow>();
-      rows.forEach((r) => m.set(r.id, r));
+      rows.forEach((row) => m.set(row.id, row));
       return m;
     }, [rows]);
 
-    const measureRef = useRef<HTMLDivElement>(null!);
     const rootRef = useRef<HTMLDivElement>(null!);
-
     const setRootRef = (node: HTMLDivElement | null) => {
       rootRef.current = node as HTMLDivElement;
       if (typeof ref === 'function') ref(node);
       else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
     };
 
-    const SECTION_HEADER_EXTRA_PX = 26;
-    const firstRowId = rows[0]?.id;
-    const getExtraHeightBefore = (id: string) => {
-      const row = byId.get(id);
-      if (!row) return 0;
-      if (row.isFirstInSection && row.sectionTitleEn && id !== firstRowId) {
-        return SECTION_HEADER_EXTRA_PX;
-      }
-      return 0;
-    };
-
-    const getForcesNewRow = (id: string) => {
-      const row = byId.get(id);
-      if (!row) return false;
-      return row.isFirstInSection && !!row.sectionTitleEn && id !== firstRowId;
-    };
-
-    // IMPORTANT: still call the pagination hooks unconditionally (rules of
-    // hooks), but when hideSolutions is true we only ever have 1 page's
-    // worth of "content" that matters (the grid), so this just resolves
-    // to a harmless [[...ids]] that we simply don't render.
-    const measuredPages = useAutoPaginate(blockIds, measureRef, {
-      reservedFirstPagePx: SOLUTIONS_RESERVED_FIRST[columns],
-      reservedOtherPagePx: SOLUTIONS_RESERVED_OTHER[columns],
-      columns,
-      fontSize,
-      active: active && !hideSolutions,
-      extraHeightBefore: getExtraHeightBefore,
-      forcesNewRow: getForcesNewRow,
-    });
-
-    const solutionPages = useOverflowCorrection(measuredPages, rootRef, {
+    const solutionPages = useRenderedColumnPagination(blockIds, rootRef, {
       pageSelector: '[data-content-page="true"]',
       footerSelector: '[data-page-footer="true"]',
+      columnSelector: '[data-flow-column="true"]',
       blockAttr: 'data-block-id',
+      columns,
+      active: active && !hideSolutions,
     });
 
-    // ── hideSolutions: single grid-only page ──────────────────────────
     if (hideSolutions) {
       return (
         <div ref={setRootRef} className="flex flex-col items-center gap-6">
@@ -358,7 +340,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
               className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
               style={{ color: PREVIEW_COLORS.mutedText }}
             >
-              <span>Test PDF — Answer Key</span>
+              <span>Test PDF - Answer Key</span>
               <span>Page 1 of 1</span>
             </div>
           </div>
@@ -368,48 +350,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
 
     return (
       <div ref={setRootRef} className="flex flex-col items-center gap-6">
-        {/*
-          Measurement container: position:fixed + top:-9999px so it's truly
-          off-screen and not clipped by any ancestor's overflow:hidden or
-          zero-width box. This ensures getBoundingClientRect() returns real
-          heights for each solution block.
-        */}
-        <div
-          aria-hidden
-          data-pdf-ignore="true"
-          style={{
-            position: 'fixed',
-            top: '-9999px',
-            left: '-9999px',
-            visibility: 'hidden',
-            pointerEvents: 'none',
-            zIndex: -1,
-          }}
-        >
-          <div
-            ref={measureRef}
-            style={{
-              ...GRID_STYLE[columns],
-              gap: '0 20px',
-              width: 718,
-            }}
-          >
-            {rows.map((row) => (
-              <div key={row.id} data-block-id={row.id}>
-                <SolutionBlock
-                  row={row}
-                  showEn={showEn}
-                  showHi={showHi}
-                  columns={columns}
-                  fontSize={fontSize}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Pages */}
-        {solutionPages.map((pageBlockIds, pageIndex) => (
+        {solutionPages.map((pageColumns, pageIndex) => (
           <div
             key={pageIndex}
             className="answer-key-page relative"
@@ -426,7 +367,6 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
             }}
           >
             <PageWatermark metadata={paper.metadata} />
-            {/* ── Page 1: doc header + answer grid + solutions heading ── */}
             {pageIndex === 0 && (
               <>
                 <div
@@ -463,8 +403,6 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                       {paper.metadata.examTitleHi}
                     </p>
                   )}
-
-                  {/* Identifying strip: code · set/series · date · duration · marks */}
                   <div
                     className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[9.5px]"
                     style={{ color: PREVIEW_COLORS.mutedText }}
@@ -504,61 +442,67 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
               </>
             )}
 
-            {/* ── Running header pages 2+ ── */}
             {pageIndex > 0 && (
               <div
                 className="mb-3 flex items-center justify-between border-b pb-1 text-[10px] font-medium"
                 style={{ borderColor: PREVIEW_COLORS.ruleStrong }}
               >
-                <span>Solutions — {paper.metadata.examTitle}</span>
+                <span>Solutions - {paper.metadata.examTitle}</span>
                 <span>{paper.metadata.examCode}</span>
               </div>
             )}
 
-            {/* ── Solutions grid ── */}
-            <div style={{ ...GRID_STYLE[columns], gap: '0 20px' }}>
-              {pageBlockIds.map((id) => {
-                const row = byId.get(id);
-                if (!row) return null;
-                return (
-                  <React.Fragment key={id}>
-                    {row.isFirstInSection && row.sectionTitleEn && (
-                      <div
-                        style={{
-                          ...COL_SPAN_ALL,
-                          borderBottom: `1px solid ${PREVIEW_COLORS.ruleSoft}`,
-                          color: PREVIEW_COLORS.quaternaryText,
-                          marginTop: '6px',
-                          marginBottom: '6px',
-                          paddingBottom: '2px',
-                          fontSize: '10px',
-                          fontWeight: 'bold',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                        }}
-                      >
-                        {row.sectionTitleEn}
-                      </div>
-                    )}
-                    <SolutionBlock
-                      row={row}
-                      showEn={showEn}
-                      showHi={showHi}
-                      columns={columns}
-                      fontSize={fontSize}
-                    />
-                  </React.Fragment>
-                );
-              })}
+            <div style={COLUMN_CONTAINER_STYLE[columns]}>
+              {pageColumns.map((columnIds, columnIndex) => (
+                <div
+                  key={columnIndex}
+                  data-flow-column="true"
+                  className="min-w-0"
+                  style={{ width: COLUMN_MEASURE_WIDTHS[columns], flex: '0 0 auto' }}
+                >
+                  {columnIds.map((id) => {
+                    const row = byId.get(id);
+                    if (!row) return null;
+
+                    return (
+                      <React.Fragment key={id}>
+                        {row.isFirstInSection && row.sectionTitleEn && (
+                          <div
+                            style={{
+                              borderBottom: `1px solid ${PREVIEW_COLORS.ruleSoft}`,
+                              color: PREVIEW_COLORS.quaternaryText,
+                              marginTop: '6px',
+                              marginBottom: '6px',
+                              paddingBottom: '2px',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                            }}
+                          >
+                            {row.sectionTitleEn}
+                          </div>
+                        )}
+                        <SolutionBlock
+                          row={row}
+                          showEn={showEn}
+                          showHi={showHi}
+                          columns={columns}
+                          fontSize={fontSize}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
 
-            {/* Page footer */}
             <div
               data-page-footer="true"
               className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-9 text-[9px]"
               style={{ color: PREVIEW_COLORS.mutedText }}
             >
-              <span>Test PDF — Answer Key</span>
+              <span>Test PDF - Answer Key</span>
               <span>
                 Page {pageIndex + 1} of {solutionPages.length}
               </span>

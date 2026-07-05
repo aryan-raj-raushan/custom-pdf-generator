@@ -439,7 +439,7 @@ function buildQuestion(
     });
   }
 
-  const solutionJoined = block.solutionLines.join(' ').replace(/\s+/g, ' ').trim();
+  const solutionJoined = block.solutionLines.join('\n').trim();
   const { en: solutionEn, hi: solutionHi } = solutionJoined
     ? detectLanguageSplit(block.solutionLines)
     : { en: '', hi: '' };

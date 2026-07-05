@@ -147,6 +147,11 @@ export function CustomPdfCreator({
   const [jumpToken, setJumpToken] = useState(0);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [reviewState, setReviewState] = useState({
+    paperReviewed: false,
+    answerKeyReviewed: false,
+    bypassed: false,
+  });
 
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const highlightedPreviewRef = useRef<HTMLDivElement>(null!);
@@ -165,6 +170,20 @@ export function CustomPdfCreator({
 
   const previewRef = useRef<HTMLDivElement>(null!);
   const answerKeyRef = useRef<HTMLDivElement>(null!);
+  const reviewResetKey = JSON.stringify({
+    paper,
+    columns: paper.metadata.columns,
+    fontSize: paper.metadata.fontSize,
+  });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReviewState({
+      paperReviewed: false,
+      answerKeyReviewed: false,
+      bypassed: false,
+    });
+  }, [reviewResetKey]);
 
   const totalQuestions = paper.sections.reduce((sum, s) => sum + s.questions.length, 0);
   const totalFlagged = paper.sections.reduce(
@@ -311,6 +330,12 @@ export function CustomPdfCreator({
             fileName={paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}
             highlightedPreviewRef={highlightedPreviewRef}
             answerGridOnlyRef={answerGridOnlyRef}
+            disabled={
+              !(
+                reviewState.bypassed ||
+                (reviewState.paperReviewed && reviewState.answerKeyReviewed)
+              )
+            }
           />
 
           {/* Save — edit only */}
@@ -319,7 +344,13 @@ export function CustomPdfCreator({
               <Button
                 variant="primary"
                 onClick={() => setSaveMenuOpen((o) => !o)}
-                disabled={saveState === 'saving'}
+                disabled={
+                  saveState === 'saving' ||
+                  !(
+                    reviewState.bypassed ||
+                    (reviewState.paperReviewed && reviewState.answerKeyReviewed)
+                  )
+                }
               >
                 {saveState === 'saving' ? (
                   <Loader2 size={15} className="animate-spin" />
@@ -424,6 +455,22 @@ export function CustomPdfCreator({
             onFontSizeChange={handleFontSizeChange}
             highlightedPreviewRef={highlightedPreviewRef}
             answerGridOnlyRef={answerGridOnlyRef}
+            reviewState={reviewState}
+            reviewResetKey={reviewResetKey}
+            onConfirmPaperReview={() =>
+              setReviewState((current) => ({ ...current, paperReviewed: true }))
+            }
+            onConfirmAnswerKeyReview={() =>
+              setReviewState((current) => ({ ...current, answerKeyReviewed: true }))
+            }
+            onBypassReview={() =>
+              setReviewState((current) => ({
+                ...current,
+                paperReviewed: true,
+                answerKeyReviewed: true,
+                bypassed: true,
+              }))
+            }
           />
         </div>
       </div>

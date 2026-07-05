@@ -68,6 +68,8 @@ export interface ExamMetadata {
     imageDataUrl?: string;
     /** Opacity 0–1. Default 0.12. Slider range: 0.04–0.30. */
     opacity?: number;
+    /** Rotation angle in degrees. */
+    rotation?: number;
   };
 
   coverPage?: {

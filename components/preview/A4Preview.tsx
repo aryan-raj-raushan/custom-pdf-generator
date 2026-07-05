@@ -6,7 +6,7 @@ import { ExamPaper, Question } from '@/types/exam';
 import { PREVIEW_COLORS } from '@/lib/previewTheme';
 import { PaperHeader, InstructionsBlock, CoachingPageFooter, HeaderBanner } from './PaperHeader';
 import { QuestionBlock } from './QuestionBlock';
-import { useAutoPaginate, useOverflowCorrection } from '@/lib/usePagination';
+import { useRenderedColumnPagination } from '@/lib/usePagination';
 import { FONT_SIZE_DEFAULT } from './PreviewPanel';
 
 export type ColumnCount = 1 | 2 | 3;
@@ -26,33 +26,19 @@ interface A4PreviewProps {
   columns?: ColumnCount;
   fontSize?: number;
   active?: boolean;
-  highlightCorrectAnswers?: boolean; // NEW
+  highlightCorrectAnswers?: boolean;
 }
 
-function getReservedFirstPage(columns: ColumnCount, fontSize: number): number {
-  const base: Record<ColumnCount, number> = { 1: 460, 2: 430, 3: 420 };
-  const extra = Math.max(0, fontSize - FONT_SIZE_DEFAULT) * 4;
-  return base[columns] + extra;
-}
-
-function getReservedOtherPage(columns: ColumnCount): number {
-  const base: Record<ColumnCount, number> = { 1: 130, 2: 125, 3: 120 };
-  return base[columns];
-}
-
-// Coaching footer is ~22px tall — reserve that extra space on every page
-const COACHING_FOOTER_HEIGHT = 28;
-
-const GRID_CLASS: Record<ColumnCount, string> = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
+const COLUMN_MEASURE_WIDTHS: Record<ColumnCount, number> = {
+  1: 718,
+  2: 349,
+  3: 226,
 };
 
-const MEASURE_WIDTHS: Record<ColumnCount, number> = {
-  1: 718,
-  2: 718,
-  3: 718,
+const COLUMN_CONTAINER_STYLE: Record<ColumnCount, React.CSSProperties> = {
+  1: { display: 'flex', gap: 0 },
+  2: { display: 'flex', gap: 20 },
+  3: { display: 'flex', gap: 20 },
 };
 
 export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
@@ -63,16 +49,12 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
       columns = 2,
       fontSize = FONT_SIZE_DEFAULT,
       active = true,
-      highlightCorrectAnswers = false, // ADD THIS
+      highlightCorrectAnswers = false,
     },
     ref,
   ) => {
-    const measureRef = useRef<HTMLDivElement>(null!);
     const rootRef = useRef<HTMLDivElement>(null!);
 
-    // Merge the forwarded ref (used by the export pipeline) with a local
-    // ref (used internally for the overflow-correction pass) without
-    // needing an extra dependency.
     const setRootRef = (node: HTMLDivElement | null) => {
       rootRef.current = node as HTMLDivElement;
       if (typeof ref === 'function') ref(node);
@@ -100,7 +82,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
       return out;
     }, [paper.sections]);
 
-    const blockIds = flatQuestions.map((f) => f.blockId);
+    const blockIds = useMemo(() => flatQuestions.map((f) => f.blockId), [flatQuestions]);
 
     const byId = useMemo(() => {
       const m = new Map<string, FlatQuestion>();
@@ -108,83 +90,17 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
       return m;
     }, [flatQuestions]);
 
-    // Add coaching footer height to reserved space so questions don't overlap it
-    const reservedFirst =
-      getReservedFirstPage(columns, fontSize) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
-    const reservedOther = getReservedOtherPage(columns) + (isCoaching ? COACHING_FOOTER_HEIGHT : 0);
-
-    const SECTION_HEADER_EXTRA_PX = 34;
-    const firstQuestionIsFirst = flatQuestions[0]?.blockId;
-    const getExtraHeightBefore = (id: string) => {
-      const f = byId.get(id);
-      if (!f) return 0;
-      if (f.isFirstInSection && id !== firstQuestionIsFirst) {
-        return SECTION_HEADER_EXTRA_PX;
-      }
-      return 0;
-    };
-
-    const getForcesNewRow = (id: string) => {
-      const f = byId.get(id);
-      if (!f) return false;
-      return f.isFirstInSection && id !== firstQuestionIsFirst;
-    };
-
-    const measuredPages = useAutoPaginate(blockIds, measureRef, {
-      reservedFirstPagePx: reservedFirst,
-      reservedOtherPagePx: reservedOther,
-      columns,
-      fontSize,
-      active,
-      extraHeightBefore: getExtraHeightBefore,
-      forcesNewRow: getForcesNewRow,
-    });
-
-    // Safety-net pass: after real pages render, fix any question block that
-    // still visually overlaps the footer by bumping it to the next page.
-    const pages = useOverflowCorrection(measuredPages, rootRef, {
+    const pages = useRenderedColumnPagination(blockIds, rootRef, {
       pageSelector: '[data-content-page="true"]',
       footerSelector: '[data-page-footer="true"]',
+      columnSelector: '[data-flow-column="true"]',
       blockAttr: 'data-question-id',
+      columns,
+      active,
     });
-
-    const gridClass = GRID_CLASS[columns];
 
     return (
       <div ref={setRootRef} className="flex flex-col items-center gap-6">
-        {/* Hidden measurement pass */}
-        <div style={{ position: 'relative', overflow: 'hidden', height: 0, width: 0 }}>
-          <div
-            ref={measureRef}
-            aria-hidden
-            data-pdf-ignore="true"
-            className={`pointer-events-none grid ${gridClass} gap-x-5`}
-            style={{
-              width: MEASURE_WIDTHS[columns],
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              visibility: 'hidden',
-            }}
-          >
-            {flatQuestions.map((f) => (
-              <div key={f.blockId} data-block-id={f.blockId}>
-                <QuestionBlock
-                  key={f.blockId}
-                  question={f.question}
-                  number={f.number}
-                  metadata={paper.metadata}
-                  isHighlighted={f.blockId === highlightedQuestionId}
-                  showFlagIndicator
-                  columns={columns}
-                  fontSize={fontSize}
-                  highlightCorrectOption={highlightCorrectAnswers}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
         {paper.metadata.coverPage?.enabled && paper.metadata.coverPage.imageDataUrl && (
           <CoverPage imageDataUrl={paper.metadata.coverPage.imageDataUrl} />
         )}
@@ -211,64 +127,49 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
             )}
             {pageIndex > 0 && <RunningHeader metadata={paper.metadata} />}
 
-            {(() => {
-              const groups: {
-                titleEn?: string;
-                titleHi?: string;
-                questions: FlatQuestion[];
-              }[] = [];
+            <div className="mt-2.5" style={COLUMN_CONTAINER_STYLE[columns]}>
+              {pageBlockIds.map((columnIds, columnIndex) => (
+                <div
+                  key={columnIndex}
+                  data-flow-column="true"
+                  className="min-w-0"
+                  style={{ width: COLUMN_MEASURE_WIDTHS[columns], flex: '0 0 auto' }}
+                >
+                  {columnIds.map((id) => {
+                    const f = byId.get(id);
+                    if (!f) return null;
 
-              pageBlockIds.forEach((id) => {
-                const q = byId.get(id);
-                if (!q) return;
-                if (q.isFirstInSection || groups.length === 0) {
-                  groups.push({
-                    titleEn: q.sectionTitleEn,
-                    titleHi: q.sectionTitleHi,
-                    questions: [q],
-                  });
-                } else {
-                  groups[groups.length - 1].questions.push(q);
-                }
-              });
-
-              return (
-                <div className="mt-2.5">
-                  {groups.map((group, index) => (
-                    <div key={`${group.titleEn}-${index}`} className="mb-3">
-                      {group.titleEn && (
-                        <div
-                          className="mb-2 mt-2 border-b pb-1 text-[11px] font-bold uppercase tracking-wide"
-                          style={{ borderColor: PREVIEW_COLORS.ruleMedium }}
-                        >
-                          {group.titleEn}
-                          {paper.metadata.language !== 'en' && group.titleHi && (
-                            <span className="font-devanagari ml-2 font-normal normal-case">
-                              {group.titleHi}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <div className={`grid ${gridClass} gap-x-5 gap-y-0`}>
-                        {group.questions.map((f) => (
-                          <QuestionBlock
-                            key={f.blockId}
-                            question={f.question}
-                            number={f.number}
-                            metadata={paper.metadata}
-                            isHighlighted={f.blockId === highlightedQuestionId}
-                            showFlagIndicator
-                            columns={columns}
-                            fontSize={fontSize}
-                            highlightCorrectOption={highlightCorrectAnswers}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    return (
+                      <React.Fragment key={f.blockId}>
+                        {f.isFirstInSection && f.sectionTitleEn && (
+                          <div
+                            className="mb-2 mt-2 border-b pb-1 text-[11px] font-bold uppercase tracking-wide"
+                            style={{ borderColor: PREVIEW_COLORS.ruleMedium }}
+                          >
+                            {f.sectionTitleEn}
+                            {paper.metadata.language !== 'en' && f.sectionTitleHi && (
+                              <span className="font-devanagari ml-2 font-normal normal-case">
+                                {f.sectionTitleHi}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <QuestionBlock
+                          question={f.question}
+                          number={f.number}
+                          metadata={paper.metadata}
+                          isHighlighted={f.blockId === highlightedQuestionId}
+                          showFlagIndicator
+                          columns={columns}
+                          fontSize={fontSize}
+                          highlightCorrectOption={highlightCorrectAnswers}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
-              );
-            })()}
+              ))}
+            </div>
           </Page>
         ))}
       </div>
@@ -278,17 +179,13 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
 
 A4Preview.displayName = 'A4Preview';
 
-// ─────────────────────────────────────────────────────────
-//  PageWatermark — absolutely centred, rotated, pointer-events
-//  none so it never interferes with text selection or export
-// ─────────────────────────────────────────────────────────
 export function PageWatermark({ metadata }: Readonly<{ metadata: ExamPaper['metadata'] }>) {
   const wm = metadata.watermark;
   if (!wm?.enabled) return null;
 
   const opacity = wm.opacity ?? 0.12;
+  const rotation = wm.rotation ?? (wm.type === 'image' ? -25 : -28);
 
-  // Image watermark
   if (wm.type === 'image' && wm.imageDataUrl) {
     return (
       <div
@@ -312,14 +209,13 @@ export function PageWatermark({ metadata }: Readonly<{ metadata: ExamPaper['meta
             height: 450,
             objectFit: 'contain',
             opacity,
-            transform: 'rotate(-25deg)',
+            transform: `rotate(${rotation}deg)`,
           }}
         />
       </div>
     );
   }
 
-  // Text watermark
   const text = wm.text?.trim();
   if (!text) return null;
 
@@ -346,7 +242,7 @@ export function PageWatermark({ metadata }: Readonly<{ metadata: ExamPaper['meta
           textTransform: 'uppercase',
           color: PREVIEW_COLORS.pageText,
           opacity,
-          transform: 'rotate(-28deg)',
+          transform: `rotate(${rotation}deg)`,
           whiteSpace: 'nowrap',
           userSelect: 'none',
           lineHeight: 1,
@@ -364,7 +260,7 @@ function CoverPage({ imageDataUrl }: Readonly<{ imageDataUrl: string }>) {
       className="pdf-page relative"
       style={{
         width: 794,
-        height: 1123, // fixed, not minHeight — must be exactly one A4 page
+        height: 1123,
         backgroundColor: '#ffffff',
         boxShadow: PREVIEW_COLORS.pageShadow,
         overflow: 'hidden',
@@ -380,17 +276,13 @@ function CoverPage({ imageDataUrl }: Readonly<{ imageDataUrl: string }>) {
         style={{
           width: '100%',
           height: '100%',
-          objectFit: 'contain', // scales down to fit, never crops/overflows; letterboxes on mismatched aspect ratios
+          objectFit: 'contain',
         }}
       />
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  Page wrapper — coaching variant swaps the default footer
-//  for CoachingPageFooter and adjusts bottom padding
-// ─────────────────────────────────────────────────────────
 function Page({
   children,
   pageNumber,
@@ -412,7 +304,6 @@ function Page({
         width: 794,
         height: 1123,
         overflow: 'hidden',
-        // Extra bottom padding for coaching so content never hides behind the footer bar
         padding: isCoaching ? '34px 38px 52px' : '34px 38px 44px',
         backgroundColor: PREVIEW_COLORS.pageBackground,
         color: PREVIEW_COLORS.pageText,

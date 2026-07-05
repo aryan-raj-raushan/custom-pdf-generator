@@ -67,14 +67,6 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
   const rowKeysRef = useRef<string[]>([]);
 
-  function getRowKey(index: number) {
-    if (!rowKeysRef.current[index]) {
-      rowKeysRef.current[index] =
-        `row-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
-    }
-    return rowKeysRef.current[index];
-  }
-
   function addInstruction() {
     const nextEn = [...metadata.generalInstructions, ''];
     const nextHi = [...(metadata.generalInstructionsHi ?? []), ''];
@@ -151,6 +143,9 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       });
     reader.readAsDataURL(file);
   }
+
+  const watermarkRotation =
+    metadata.watermark?.rotation ?? ((metadata.watermark?.type ?? 'text') === 'image' ? -25 : -28);
 
   return (
     <motion.div
@@ -771,15 +766,40 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                     />
                     <span className="text-[10px] text-stone-400">Bold</span>
                   </div>
+                  <div className="mt-3">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label className="text-[11px] font-medium text-stone-500">Rotation</label>
+                      <span className="text-[11px] font-semibold text-stone-600">
+                        {watermarkRotation}°
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-stone-400">-180°</span>
+                      <input
+                        type="range"
+                        min={-180}
+                        max={180}
+                        step={1}
+                        value={watermarkRotation}
+                        onChange={(e) =>
+                          update('watermark', {
+                            ...metadata.watermark!,
+                            rotation: Number(e.target.value),
+                          })
+                        }
+                        className="flex-1 accent-stone-900"
+                      />
+                      <span className="text-[10px] text-stone-400">180°</span>
+                    </div>
+                  </div>
                   <div className="mt-2 flex items-center justify-center rounded-md border border-stone-100 bg-white py-3">
                     <span
                       className="text-[18px] font-black uppercase tracking-widest text-stone-900"
                       style={{
                         opacity: metadata.watermark?.opacity ?? 0.12,
                         fontFamily: 'var(--font-devanagari, inherit)',
-                        rotate: '-20deg',
                         display: 'inline-block',
-                        transform: 'rotate(-20deg)',
+                        transform: `rotate(${watermarkRotation}deg)`,
                       }}
                     >
                       {(metadata.watermark?.type ?? 'text') === 'text'
