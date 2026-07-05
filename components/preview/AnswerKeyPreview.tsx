@@ -66,10 +66,12 @@ function InlineSolutionRun({
   text,
   className,
   continuationClassName,
+  continuationStyle,
 }: Readonly<{
   text: string;
   className?: string;
   continuationClassName?: string;
+  continuationStyle?: React.CSSProperties;
 }>) {
   const [firstLine, ...rest] = text.split('\n');
   return (
@@ -78,7 +80,7 @@ function InlineSolutionRun({
         <MathText text={firstLine} />
       </span>
       {rest.length > 0 && (
-        <span className={continuationClassName ?? 'block'}>
+        <span className={continuationClassName ?? 'block'} style={continuationStyle}>
           {rest.map((line, index) => (
             <React.Fragment key={`${line}-${index}`}>
               {index > 0 && <br />}
@@ -192,7 +194,8 @@ function SolutionBlock({
                 <InlineSolutionRun
                   text={row.solutionHi}
                   className="font-devanagari"
-                  continuationClassName="font-devanagari block mt-0.5 text-[9.5px]"
+                  continuationClassName="font-devanagari block mt-0.5"
+                  continuationStyle={{ fontSize: `${actualFontSize}px` }}
                 />
               )}
             </div>
