@@ -220,6 +220,7 @@ export function useRenderedColumnPagination(
     active?: boolean;
     safetyBufferPx?: number;
     maxPasses?: number;
+    resetKey?: string;
   },
 ) {
   const {
@@ -231,6 +232,7 @@ export function useRenderedColumnPagination(
     active = true,
     safetyBufferPx = 18,
     maxPasses = 40,
+    resetKey = '',
   } = options;
 
   const [pages, setPages] = useState<string[][][]>(() =>
@@ -247,7 +249,7 @@ export function useRenderedColumnPagination(
     passRef.current = 0;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPages(seeded);
-  }, [blockIds, blockIdsKey, columns]);
+  }, [blockIds, blockIdsKey, columns, resetKey]);
 
   useEffect(() => {
     if (!active) return;
@@ -420,7 +422,7 @@ export function useRenderedColumnPagination(
     return () => {
       cancelled = true;
     };
-  }, [active, blockIdsKey]);
+  }, [active, blockIdsKey, resetKey]);
 
   return pages;
 }

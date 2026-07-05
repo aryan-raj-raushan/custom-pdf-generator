@@ -265,6 +265,7 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
       blockAttr: 'data-block-id',
       columns,
       active: active && !hideSolutions,
+      resetKey: `${columns}-${fontSize}-${paper.metadata.language}-${hideSolutions ? 'grid-only' : 'with-solutions'}`,
     });
 
     if (hideSolutions) {

@@ -97,6 +97,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
       blockAttr: 'data-question-id',
       columns,
       active,
+      resetKey: `${columns}-${fontSize}-${paper.metadata.headerMode ?? 'template'}-${paper.metadata.headerBannerImageUrl ?? ''}-${paper.metadata.headerTemplate ?? 'classic'}-${paper.metadata.language}`,
     });
 
     return (
