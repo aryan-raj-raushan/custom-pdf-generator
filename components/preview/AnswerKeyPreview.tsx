@@ -310,6 +310,13 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
     const rows: FlatAnswerRow[] = useMemo(() => {
       let n = 0;
       const out: FlatAnswerRow[] = [];
+      const allIds = paper.sections.flatMap((s) => s.questions.map((q) => q.id));
+      console.log('[editor-load] AnswerKeyPreview rows build', {
+        sectionCount: paper.sections.length,
+        sectionSizes: paper.sections.map((s) => s.questions.length),
+        totalQuestions: allIds.length,
+        uniqueQuestionIds: new Set(allIds).size,
+      });
       paper.sections.forEach((section) => {
         section.questions.forEach((q, qi) => {
           n += 1;

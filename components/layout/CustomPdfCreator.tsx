@@ -149,6 +149,18 @@ export function CustomPdfCreator({
   const canEdit = userPermission !== 'view';
   const router = useRouter();
   const [paper, setPaper] = useState<ExamPaper>(initialPaper ?? DEFAULT_PAPER);
+
+  useEffect(() => {
+    const ids = paper.sections.flatMap((s) => s.questions.map((q) => q.id));
+    console.log('[editor-load] CustomPdfCreator paper state (mount/paper change)', {
+      paperId,
+      sectionCount: paper.sections.length,
+      sectionSizes: paper.sections.map((s) => s.questions.length),
+      totalQuestions: ids.length,
+      uniqueQuestionIds: new Set(ids).size,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paper]);
   const [activeTab, setActiveTab] = useState('metadata');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<string | null>(null);
@@ -200,12 +212,25 @@ export function CustomPdfCreator({
   );
 
   function handleBulkImport(result: ReturnType<typeof parseBulkImportText>) {
+    // Re-mint every id on append, even though the parser already assigns
+    // one. Re-importing the same paste/docx into the same project (double
+    // click, retry, or re-pasting identical text) reuses the exact same
+    // question/option objects with the same crypto.randomUUID() output —
+    // without this, that collision propagates into paper.sections and
+    // downstream React keys (see infinite re-render bug tied to duplicate
+    // question ids).
+    const freshQuestions = result.questions.map((q) => ({
+      ...q,
+      id: crypto.randomUUID(),
+      options: q.options?.map((o) => ({ ...o, id: crypto.randomUUID() })),
+    }));
+
     setPaper((p) => {
       const sections = [...p.sections];
       const targetIndex = sections.length - 1;
       sections[targetIndex] = {
         ...sections[targetIndex],
-        questions: [...sections[targetIndex].questions, ...result.questions],
+        questions: [...sections[targetIndex].questions, ...freshQuestions],
       };
       return { ...p, sections };
     });

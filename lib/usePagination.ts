@@ -344,6 +344,26 @@ export function useRenderedColumnPagination(
 
         const pageNodes = Array.from(root.querySelectorAll<HTMLElement>(pageSelector));
         if (pageNodes.length === 0) return;
+        // The DOM must reflect the CURRENT `pages` state before we measure
+        // against it — otherwise pageNodes[i] can silently correspond to a
+        // different logical page than pages[i] (e.g. right after a setPages
+        // call added/removed a page but the browser hasn't committed/painted
+        // that yet). Measuring against a mismatched page/column would move
+        // ids based on the wrong index, and on a large multi-page document
+        // this is exactly the sequence that lets the same block id get
+        // written into two different target pages across successive passes
+        // (visible as duplicate React keys / repeated questions in the
+        // rendered output). useOverflowCorrection / useColumnOverflowCorrection
+        // already guard on this; this hook was missing the same check.
+        if (pageNodes.length !== pages.length) return;
+        // Same reasoning, one level down: if a page's rendered column count
+        // doesn't match the expected column count yet (DOM mid-transition),
+        // columnIndex in the loop below would be measuring against the wrong
+        // physical column too.
+        const columnCountsMatch = pageNodes.every(
+          (pageNode) => pageNode.querySelectorAll(columnSelector).length === columns,
+        );
+        if (!columnCountsMatch) return;
 
         const next = pages.map((page) => page.map((column) => [...column]));
         const nextTextRanges: TextRangeMap = new Map(textRanges);
@@ -461,7 +481,26 @@ export function useRenderedColumnPagination(
 
         if (!changed) return;
 
-        const normalized = normalizePages(next);
+        // Safety net: whatever the arithmetic above did, never let the same
+        // block id land in the pages structure twice — that's what surfaces
+        // as duplicate React keys and visually repeated questions. Keep only
+        // each id's first occurrence (in page/column/row order).
+        const seenIds = new Set<string>();
+        const deduped = next.map((page) =>
+          page.map((column) =>
+            column.filter((id) => {
+              if (seenIds.has(id)) {
+                // eslint-disable-next-line no-console
+                console.warn('[editor-load] dropped duplicate block id during pagination:', id);
+                return false;
+              }
+              seenIds.add(id);
+              return true;
+            }),
+          ),
+        );
+
+        const normalized = normalizePages(deduped);
         const nextKey = pagesKeyFromColumns(normalized);
         if (nextKey !== pagesKeyRef.current) {
           passRef.current += 1;
@@ -498,17 +537,20 @@ export function useRenderedColumnPagination(
     if (!root) return;
 
     const observer = new ResizeObserver(() => {
-      passRef.current = 0;
-      const currentKey = pagesKeyFromColumns(pages);
-      if (currentKey !== pagesKeyRef.current) {
-        pagesKeyRef.current = currentKey;
-      }
+      // Deliberately NOT resetting passRef here. This observer fires on any
+      // layout size change — including ones caused by our OWN setPages calls
+      // reflowing the content — so resetting the pass counter every time let
+      // a borderline block bounce between two pages/columns forever (each
+      // bounce is itself a resize, which reset the counter again before
+      // maxPasses could ever be reached). Leaving passRef alone lets the
+      // shared budget in the main effect actually cap total corrections.
+      if (passRef.current >= maxPasses) return;
       setPages((current) => [...current.map((page) => page.map((column) => [...column]))]);
     });
 
     observer.observe(root);
     return () => observer.disconnect();
-  }, [active, containerRef, pages]);
+  }, [active, containerRef, pages, maxPasses]);
 
   useEffect(() => {
     if (!active) return;

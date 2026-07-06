@@ -137,6 +137,10 @@ export function PreviewPanel({
   }, [jumpToken]);
 
   useEffect(() => {
+    scrollAreaRef.current?.scrollTo({ top: 0 });
+  }, [mode]);
+
+  useEffect(() => {
     const el = scrollAreaRef.current;
     if (!el) return;
 

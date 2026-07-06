@@ -1,7 +1,7 @@
 // components/import/BulkImportModal.tsx
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
@@ -64,8 +64,15 @@ export function BulkImportModal({ open, onClose, onImport }: Readonly<BulkImport
     setDocxError(null);
   }
 
+  const importedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (open) importedRef.current = false;
+  }, [open]);
+
   function handleImport() {
-    if (result.totalParsed === 0) return;
+    if (result.totalParsed === 0 || importedRef.current) return;
+    importedRef.current = true;
     onImport(result);
     resetAll();
     onClose();
@@ -73,6 +80,7 @@ export function BulkImportModal({ open, onClose, onImport }: Readonly<BulkImport
 
   function handleModalClose() {
     resetAll();
+    importedRef.current = false;
     onClose();
   }
 

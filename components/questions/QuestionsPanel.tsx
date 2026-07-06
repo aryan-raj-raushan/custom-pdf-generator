@@ -39,6 +39,32 @@ export function QuestionsPanel({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const showHindi = metadata.language !== 'en';
 
+  React.useEffect(() => {
+    sections.forEach((s) => {
+      const ids = s.questions.map((q) => q.id);
+      const unique = new Set(ids);
+      if (unique.size !== ids.length) {
+        console.warn(
+          '[editor-load] duplicate question ids found within section (would cause duplicate React keys)',
+          {
+            sectionId: s.id,
+            sectionTitle: s.titleEn,
+            total: ids.length,
+            unique: unique.size,
+          },
+        );
+      }
+    });
+    const allIds = sections.flatMap((s) => s.questions.map((q) => q.id));
+    console.log('[editor-load] QuestionsPanel render', {
+      sectionCount: sections.length,
+      sectionSizes: sections.map((s) => s.questions.length),
+      totalQuestions: allIds.length,
+      uniqueQuestionIds: new Set(allIds).size,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
+
   // If the highlighted question lives in a collapsed section, force that
   // section open so the scroll-into-view target actually exists in the DOM.
   React.useEffect(() => {
