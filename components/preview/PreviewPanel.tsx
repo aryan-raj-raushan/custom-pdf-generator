@@ -393,10 +393,12 @@ export function PreviewPanel({
             hideSolutions
           />
         </div>
-        {/* Both previews stay mounted AND laid out (never display:none) so
-            useAutoPaginate can actually measure + paginate the inactive one —
-            otherwise it never recalculates and combined export grabs a stale
-            single-page result. */}
+        {/* Both previews stay mounted AND laid out (never display:none), and
+            both stay `active` regardless of which tab is selected, so
+            useAutoPaginate/useRenderedColumnPagination keep converging on
+            the inactive one in the background too — otherwise switching
+            tabs restarted its convergence from scratch (visible delay),
+            and a combined export could grab a stale single-page result. */}
         <div
           style={{
             position: mode === 'paper' ? 'static' : 'absolute',
@@ -419,7 +421,7 @@ export function PreviewPanel({
               highlightedQuestionId={highlightedQuestionId}
               columns={columns}
               fontSize={fontSize}
-              active={mode === 'paper'}
+              active
             />
           </div>
         </div>
@@ -444,7 +446,7 @@ export function PreviewPanel({
               paper={paper}
               columns={columns}
               fontSize={fontSize}
-              active={mode === 'answerKey'}
+              active
             />
           </div>
         </div>

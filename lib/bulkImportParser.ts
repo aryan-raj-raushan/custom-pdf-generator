@@ -65,7 +65,7 @@ const REASON_RE = /^\s*(?:Reason\s*\(?R\)?|कारण\s*R?)\s*[:\-]\s*(.*)$/iu
 // The "choose from the codes below" instruction line that follows Assertion/Reason
 // — once we see this, subsequent text belongs back to the question stem, not the reason.
 const CODE_HINT_RE =
-  /(कूट|कूटों|codes?\s+given\s+below|select\s+the\s+correct\s+answer|सही उत्तर चुनिए)/iu;
+  /(कूट|कूटों|codes?\s+given\s+below|select\s+the\s+correct\s+answer|सही उत्तर चुनिए|विकल्प\s+का\s+चयन\s+करें|सत्य\s+विकल्प|correct\s+option)/iu;
 
 // Heuristic cues that a question or option is image-based rather than text-based.
 const IMAGE_CUE_RE =
