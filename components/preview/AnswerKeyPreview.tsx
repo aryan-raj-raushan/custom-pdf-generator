@@ -245,6 +245,12 @@ function AnswerFragmentBlock({
       );
     }
     const { enText, hiText } = resolveDisplayText(showEn, showHi, row.solutionEn, row.solutionHi);
+    // Only push the Hindi text onto its own line when it's rendered
+    // alongside English (bilingual) — it needs to visually separate from
+    // the English line above it there. When Hindi is the sole language
+    // shown, forcing it onto a new line pushed the whole solution below
+    // the "Solution:" label instead of continuing right after it.
+    const isBilingual = !!enText && !!hiText;
     return (
       <div style={{ color: PREVIEW_COLORS.tertiaryText }}>
         {!isContinuationPiece && (
@@ -262,7 +268,7 @@ function AnswerFragmentBlock({
           ),
           (node) => (
             <span
-              className="font-devanagari block mt-0.5"
+              className={`font-devanagari${isBilingual ? ' block mt-0.5' : ''}`}
               style={{ whiteSpace: 'pre-line', fontSize: `${actualFontSize}px` }}
             >
               {node}

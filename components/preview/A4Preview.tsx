@@ -211,8 +211,22 @@ function QuestionFragmentBlock({
   // continuations (ContinuationNumber already reserves the same indent).
   const isContinuationPiece = !!textRange && textRange.from > 0;
 
+  // Options render two-per-line (a & b, then c & d) except in 3-column mode,
+  // where a single column is already narrow enough that pairing them up
+  // would make each option unreadably cramped.
+  const isPairedOption = fragment.kind === 'option' && columns !== 3;
+
   const wrapperStyle: React.CSSProperties = {
     fontSize: `${fragment.kind === 'option' ? oSize : qSize}px`,
+    ...(isPairedOption
+      ? {
+          display: 'inline-block',
+          verticalAlign: 'top',
+          width: '50%',
+          boxSizing: 'border-box',
+          paddingRight: columns === 1 ? '16px' : '8px',
+        }
+      : undefined),
     ...(isHighlighted
       ? {
           backgroundColor: 'rgba(245, 158, 11, 0.12)',

@@ -221,6 +221,30 @@ function splitIntoBlocks(text: string): {
       continue;
     }
 
+    // "कूट:" / "codes given below" etc. on their own line — signals that any
+    // lettered lines collected so far as "options" were actually inline
+    // sub-statement list items inside the stem (e.g. "a. निकोलो मनुची | 1.
+    // इंग्लैंड" in a matching-type question), not real answer options.
+    // OPTION_RE matches lowercase a-d same as real options, so a 3-item
+    // lowercase list right before the real (uppercase) options gets
+    // misclassified as options until this line arrives — revert them back
+    // into the stem now. Checked only for lines that already failed
+    // OPTION_RE above, since a real option's own text can legitimately
+    // contain the word "कूट" (e.g. "...राजस्व कूट निर्देशिका...") without
+    // being the dedicated codes-hint line itself.
+    if (mode !== 'solution' && CODE_HINT_RE.test(line)) {
+      if (mode === 'options' && current.optionLines.length > 0) {
+        for (const o of current.optionLines) {
+          current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
+        }
+        current.optionLines = [];
+      }
+      mode = 'question';
+      qSubMode = 'stem';
+      current.questionLines.push(line);
+      continue;
+    }
+
     // Not an option/answer/solution line. If we're still in "question" mode
     // (haven't seen any options yet), this is either the next line of the
     // question stem, or a numbered sub-statement (1/2/3 inside the stem,
@@ -239,14 +263,6 @@ function splitIntoBlocks(text: string): {
         current.isAssertionReason = true;
         qSubMode = 'reason';
         current.reasonLines.push(reasonMatch[1]);
-        continue;
-      }
-
-      // Instruction line ("नीचे दिए गए कूट...") after Reason — belongs to the
-      // stem/intro, not the reason text, and also ends the reason sub-mode.
-      if (CODE_HINT_RE.test(line)) {
-        qSubMode = 'stem';
-        current.questionLines.push(line);
         continue;
       }
 

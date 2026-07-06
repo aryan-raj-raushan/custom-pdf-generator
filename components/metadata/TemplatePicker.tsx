@@ -5,6 +5,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { ExamMetadata } from '@/types/exam';
+import { FontSizeStepper } from '@/components/ui/FontSizeStepper';
 
 export type HeaderTemplate = 'classic' | 'coaching' | 'minimal';
 
@@ -43,6 +44,17 @@ interface TemplatePickerProps {
 
 export function TemplatePicker({ metadata, onChange }: TemplatePickerProps) {
   const current = metadata.headerTemplate ?? 'classic';
+
+  function updateFooterFontSize(value: number) {
+    const next = Math.min(28, Math.max(8, Number(value) || 8));
+    onChange({
+      ...metadata,
+      headerFontSizes: {
+        ...metadata.headerFontSizes,
+        footer: next,
+      },
+    });
+  }
 
   function select(tpl: HeaderTemplate) {
     // When switching TO coaching: auto-disable candidate fields & negative marking
@@ -170,14 +182,20 @@ export function TemplatePicker({ metadata, onChange }: TemplatePickerProps) {
                   Page footer text{' '}
                   <span className="text-stone-400">(dark bar at bottom of every page)</span>
                 </label>
-                <input
-                  type="text"
-                  value={metadata.footerBrandText ?? ''}
-                  onChange={(e) => onChange({ ...metadata, footerBrandText: e.target.value })}
-                  placeholder="@YourBrand | YouTube · Telegram · Instagram"
-                  className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] text-stone-700 placeholder:text-stone-300 focus:border-stone-400 focus:outline-none"
-                  style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={metadata.footerBrandText ?? ''}
+                    onChange={(e) => onChange({ ...metadata, footerBrandText: e.target.value })}
+                    placeholder="@YourBrand | YouTube · Telegram · Instagram"
+                    className="flex-1 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] text-stone-700 placeholder:text-stone-300 focus:border-stone-400 focus:outline-none"
+                    style={{ fontFamily: 'var(--font-devanagari, inherit)' }}
+                  />
+                  <FontSizeStepper
+                    value={metadata.headerFontSizes?.footer ?? 12}
+                    onChange={updateFooterFontSize}
+                  />
+                </div>
               </div>
 
               {/* Brand colour */}
