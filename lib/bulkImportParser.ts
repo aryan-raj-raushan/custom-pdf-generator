@@ -232,7 +232,7 @@ function splitIntoBlocks(text: string): {
     // OPTION_RE above, since a real option's own text can legitimately
     // contain the word "कूट" (e.g. "...राजस्व कूट निर्देशिका...") without
     // being the dedicated codes-hint line itself.
-    if (mode !== 'solution' && CODE_HINT_RE.test(line)) {
+    if (CODE_HINT_RE.test(line)) {
       if (mode === 'options' && current.optionLines.length > 0) {
         for (const o of current.optionLines) {
           current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
