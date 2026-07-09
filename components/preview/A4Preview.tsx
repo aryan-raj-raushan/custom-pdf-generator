@@ -61,6 +61,22 @@ function deriveTextSizes(
   };
 }
 
+// If one option is much longer than the others, pairing two-per-line leaves
+// a ragged block of whitespace next to the short options. In that case each
+// option should take the full line width instead.
+function hasUnevenOptions(question: Question): boolean {
+  if (!question.options || question.options.length === 0) return false;
+  const lengths = question.options.map((opt) =>
+    Math.max(opt.textEn?.length ?? 0, opt.textHi?.length ?? 0),
+  );
+  const max = Math.max(...lengths);
+  const min = Math.min(...lengths);
+  // Short options (e.g. "केवल 1" vs "केवल 1 और 2") can already cross a 60%
+  // ratio without ever risking wrapped/whitespace-heavy rows, so only kick
+  // in once the longest option is long enough to actually cause that.
+  return max >= 60 && min / max <= 0.6;
+}
+
 function buildQuestionFragments(paper: ExamPaper): FlatQuestionFragment[] {
   let n = 0;
   const out: FlatQuestionFragment[] = [];
@@ -222,7 +238,7 @@ function QuestionFragmentBlock({
   // Options render two-per-line (a & b, then c & d) except in 3-column mode,
   // where a single column is already narrow enough that pairing them up
   // would make each option unreadably cramped.
-  const isPairedOption = fragment.kind === 'option' && columns !== 3;
+  const isPairedOption = fragment.kind === 'option' && columns !== 3 && !hasUnevenOptions(question);
 
   const wrapperStyle: React.CSSProperties = {
     fontSize: `${fragment.kind === 'option' ? oSize : qSize}px`,
