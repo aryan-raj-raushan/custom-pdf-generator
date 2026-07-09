@@ -71,10 +71,10 @@ function hasUnevenOptions(question: Question): boolean {
   );
   const max = Math.max(...lengths);
   const min = Math.min(...lengths);
-  // Short options (e.g. "केवल 1" vs "केवल 1 और 2") can already cross a 60%
+  // Short options (e.g. "केवल 1" vs "केवल 1 और 2") can already cross a 70%
   // ratio without ever risking wrapped/whitespace-heavy rows, so only kick
   // in once the longest option is long enough to actually cause that.
-  return max >= 60 && min / max <= 0.6;
+  return max >= 60 && min / max <= 0.7;
 }
 
 function buildQuestionFragments(paper: ExamPaper): FlatQuestionFragment[] {
