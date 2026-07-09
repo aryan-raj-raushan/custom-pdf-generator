@@ -213,9 +213,32 @@ function splitIntoBlocks(text: string): {
 
     const optMatch = OPTION_RE.exec(line);
     if (optMatch) {
+      const letter = optMatch[1].toUpperCase();
+
+      // A letter sequence that restarts at "A" after already advancing past
+      // it (e.g. reached D) signals that what we collected so far wasn't
+      // really the answer options — it was an inline sub-statement list
+      // (List-I/List-II matching rows, lettered a-d same as real options)
+      // and the REAL options are only starting now. This happens without a
+      // dedicated "कूट:" hint line in between when that instruction is
+      // embedded earlier in the question stem itself. Revert the earlier
+      // lines back into the stem, same as the CODE_HINT_RE case below.
+      const isRestart =
+        mode === 'options' &&
+        current.optionLines.length > 0 &&
+        letter === 'A' &&
+        current.optionLines[current.optionLines.length - 1].letter !== 'A';
+
+      if (isRestart) {
+        for (const o of current.optionLines) {
+          current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
+        }
+        current.optionLines = [];
+      }
+
       mode = 'options';
       current.optionLines.push({
-        letter: optMatch[1].toUpperCase(),
+        letter,
         text: optMatch[2],
       });
       continue;
