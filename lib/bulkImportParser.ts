@@ -67,17 +67,24 @@ const REASON_RE = /^\s*(?:Reason\s*\(?R\)?|कारण\s*R?)\s*[:\-]\s*(.*)$/iu
 const CODE_HINT_RE =
   /(कूट|कूटों|codes?\s+given\s+below|select\s+the\s+correct\s+answer|सही उत्तर चुनिए|विकल्प\s+का\s+चयन\s+करें|सत्य\s+विकल्प|correct\s+option)/iu;
 
-// "सूची-I" / "सूची -II" / "List-I" / "List II" — the column headers of a
-// match-the-following question. Seeing one while we're sitting in "options"
-// mode means the a/b/c/d rows collected so far were List-I's own labels
-// (lettered the same way as real options), not the answer choices — same
-// situation CODE_HINT_RE handles for the "कूट:" instruction line.
-const LIST_HEADER_RE = /^\s*(?:सूची|list)\s*-?\s*(?:i{1,3}|1|2)\b/iu;
+// "सूची-I" / "सूची -II" / "List-I" / "List II" / "Column A" / "Column B" —
+// the column headers of a match-the-following question, whichever labelling
+// convention the source uses. Seeing one while we're sitting in "options"
+// mode means the a/b/c/d rows collected so far were List-I/Column A's own
+// labels (lettered the same way as real options), not the answer choices —
+// same situation CODE_HINT_RE handles for the "कूट:" instruction line.
+// No trailing word-boundary check here on purpose — flattened source lines
+// glue the next token straight onto the header with no separating space at
+// all ("Column Aa. ध्रुव...", "Column B1 19842...."), so requiring a
+// boundary would miss exactly the crammed lines this needs to catch.
+const LIST_HEADER_RE = /^\s*(?:(?:सूची|list)\s*-?\s*(?:i{1,3}|1|2)|column\s*-?\s*[ab])/iu;
 
 // Same header, but capturing the header token itself plus whatever follows
-// it on the line, to tell a bare header line ("सूची-II") apart from one
-// where the whole list got flattened onto it ("सूची-II 1 पंचविश2 गोपथ...").
-const LIST_HEADER_CAPTURE_RE = /^\s*((?:सूची|list)\s*-?\s*(?:i{1,3}|1|2))\s*[:\-]?\s*(\S.*)?$/iu;
+// it on the line, to tell a bare header line ("सूची-II" / "Column B") apart
+// from one where the whole list got flattened onto it ("सूची-II 1
+// पंचविश2 गोपथ..." / "Column B1 19842 1985...").
+const LIST_HEADER_CAPTURE_RE =
+  /^\s*((?:सूची|list)\s*-?\s*(?:i{1,3}|1|2)|column\s*-?\s*[ab])\s*[:\-]?\s*(\S.*)?$/iu;
 
 // "Consider the following statements" cues — the lines between one of these
 // and the closing "which of the statements above is/are correct" line are
