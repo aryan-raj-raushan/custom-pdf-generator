@@ -78,6 +78,69 @@ function hasUnevenOptions(question: Question): boolean {
   return max >= 60 && min / max <= 0.7;
 }
 
+// A bare "सूची-I" / "List-I" / "Column A" header line — and nothing else on
+// the line — marks the start of a match-the-following question's first
+// column; "सूची-II" / "List-II" / "Column B" marks the second. Anchored at
+// both ends so a question stem that merely *mentions* "सूची-I" in a
+// sentence ("...सूची-I को सूची-II से सुमेलित कीजिए...") never matches.
+const LIST_MATCH_HEADER_A_RE = /^(?:सूची\s*-?\s*I|list\s*-?\s*I|column\s*-?\s*A)\s*[:\-]?\s*$/iu;
+const LIST_MATCH_HEADER_B_RE = /^(?:सूची\s*-?\s*II|list\s*-?\s*II|column\s*-?\s*B)\s*[:\-]?\s*$/iu;
+
+interface ListMatchingSplit {
+  before: string;
+  headerA: string;
+  itemsA: string[];
+  headerB: string;
+  itemsB: string[];
+}
+
+// Bulk-imported match-the-following questions store both columns as plain
+// stem text, one row per line — fine for pagination, but reads badly laid
+// out one long vertical list. Detects that shape so it can be rendered as
+// two side-by-side columns instead; returns null for ordinary stem text.
+function splitListMatchingText(text: string): ListMatchingSplit | null {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const idxA = lines.findIndex((l) => LIST_MATCH_HEADER_A_RE.test(l.trim()));
+  if (idxA === -1) return null;
+  const idxB = lines.findIndex((l, i) => i > idxA && LIST_MATCH_HEADER_B_RE.test(l.trim()));
+  if (idxB === -1) return null;
+
+  const itemsA = lines.slice(idxA + 1, idxB).filter((l) => l.trim());
+  const itemsB = lines.slice(idxB + 1).filter((l) => l.trim());
+  if (itemsA.length === 0 || itemsB.length === 0) return null;
+
+  return {
+    before: lines.slice(0, idxA).join('\n'),
+    headerA: lines[idxA].trim(),
+    itemsA,
+    headerB: lines[idxB].trim(),
+    itemsB,
+  };
+}
+
+function ListMatchingColumns({ split }: Readonly<{ split: ListMatchingSplit }>) {
+  return (
+    <>
+      {split.before && <div style={{ whiteSpace: 'pre-line' }}>{split.before}</div>}
+      <div className="mt-1 flex gap-6">
+        <div className="flex-1">
+          <div className="font-semibold">{split.headerA}</div>
+          {split.itemsA.map((item, i) => (
+            <div key={i}>{item}</div>
+          ))}
+        </div>
+        <div className="flex-1">
+          <div className="font-semibold">{split.headerB}</div>
+          {split.itemsB.map((item, i) => (
+            <div key={i}>{item}</div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function buildQuestionFragments(paper: ExamPaper): FlatQuestionFragment[] {
   let n = 0;
   const out: FlatQuestionFragment[] = [];
@@ -263,6 +326,39 @@ function QuestionFragmentBlock({
 
   const renderPromptText = () => {
     const { enText, hiText } = resolveDisplayText(showEn, showHi, question.textEn, question.textHi);
+
+    // Match-the-following questions never carry math markup, so the plain
+    // side-by-side layout takes priority over the mono/bilingual + LaTeX
+    // rendering path below when the column-list shape is detected.
+    const enListSplit = splitListMatchingText(enText);
+    const hiListSplit = splitListMatchingText(hiText);
+    if (enListSplit || hiListSplit) {
+      return (
+        <div style={{ whiteSpace: 'pre-line' }}>
+          {enListSplit ? (
+            <ListMatchingColumns split={enListSplit} />
+          ) : (
+            enText && <div>{enText}</div>
+          )}
+          {hiListSplit ? (
+            <div className="font-devanagari" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+              <ListMatchingColumns split={hiListSplit} />
+            </div>
+          ) : (
+            hiText && (
+              <div className="font-devanagari" style={{ color: PREVIEW_COLORS.quaternaryText }}>
+                {hiText}
+              </div>
+            )
+          )}
+          {!isContinuationPiece && (
+            <span className="ml-1 font-medium" style={{ color: PREVIEW_COLORS.secondaryText }}>
+              [{marks}]
+            </span>
+          )}
+        </div>
+      );
+    }
 
     return renderMonoOrBilingualText(
       enText,
