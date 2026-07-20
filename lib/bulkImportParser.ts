@@ -67,6 +67,36 @@ const REASON_RE = /^\s*(?:Reason\s*\(?R\)?|कारण\s*R?)\s*[:\-]\s*(.*)$/iu
 const CODE_HINT_RE =
   /(कूट|कूटों|codes?\s+given\s+below|select\s+the\s+correct\s+answer|सही उत्तर चुनिए|विकल्प\s+का\s+चयन\s+करें|सत्य\s+विकल्प|correct\s+option)/iu;
 
+// "सूची-I" / "सूची -II" / "List-I" / "List II" — the column headers of a
+// match-the-following question. Seeing one while we're sitting in "options"
+// mode means the a/b/c/d rows collected so far were List-I's own labels
+// (lettered the same way as real options), not the answer choices — same
+// situation CODE_HINT_RE handles for the "कूट:" instruction line.
+const LIST_HEADER_RE = /^\s*(?:सूची|list)\s*-?\s*(?:i{1,3}|1|2)\b/iu;
+
+// Same header, but capturing the header token itself plus whatever follows
+// it on the line, to tell a bare header line ("सूची-II") apart from one
+// where the whole list got flattened onto it ("सूची-II 1 पंचविश2 गोपथ...").
+const LIST_HEADER_CAPTURE_RE = /^\s*((?:सूची|list)\s*-?\s*(?:i{1,3}|1|2))\s*[:\-]?\s*(\S.*)?$/iu;
+
+// "Consider the following statements" cues — the lines between one of these
+// and the closing "which of the statements above is/are correct" line are
+// numbered claims that the options ("only 1 and 2", "1, 2 and 3"...) refer
+// to, but source text frequently omits the "1./2./3." markers entirely.
+const STATEMENTS_CUE_RE = /(निम्नलिखित\s+कथनों|following\s+statements)/iu;
+const STATEMENTS_CLOSING_CUE_RE =
+  /(उपर्युक्त|उपरोक्त|above\s+statements?|निम्नलिखित\s+में\s+से\s+कौन)/iu;
+const LEADING_MARKER_RE = /^\s*(\d{1,2}|i{1,3}|iv)[.)]?\s+\S/iu;
+
+// A further option marker embedded later in the same physical line as an
+// already-matched option — e.g. "(a) केवल 1 और 2 B. केवल 2 और 3 C. केवल 1
+// और 3 D. 1, 2 और 3" all on one line. This happens when a source PDF laid
+// options out in a grid and text extraction flattened the row onto a single
+// line. Matched case-insensitively and only accepted where it continues the
+// A→B→C→D sequence, so a capitalised word inside an option's own text can't
+// false-positive as a new option.
+const INLINE_OPTION_MARKER_RE = /\s\(?([A-Da-d])\)?[.)]\s+/g;
+
 // Heuristic cues that a question or option is image-based rather than text-based.
 const IMAGE_CUE_RE =
   /(see\s+the\s+figure|given\s+figure|following\s+figure|diagram\s+below|image\s+below|refer\s+to\s+the\s+image|चित्र\s+में|दिए\s+गए\s+चित्र|निम्नलिखित\s+चित्र|आकृति\s+में|नीचे\s+दिए\s+गए\s+चित्र)/iu;
@@ -101,6 +131,116 @@ function punctuateSubStatementMarker(line: string): string {
   });
 }
 
+function normalizeListHeaderToken(token: string): string {
+  return token.replace(/\s+/g, '').replace(/-/g, '').toLowerCase();
+}
+
+// Some source documents carry each List-I/List-II column twice: once
+// flattened onto the header line ("सूची-II 1 पंचविश2 गोपथ3 ..."), then
+// again properly laid out one item per line under a bare repeat of the same
+// header ("सूची-II" / "1. पंचविश" / "2. गोपथ" / ...). Rather than trying to
+// parse the flattened copy, drop it outright whenever the same header
+// reappears bare further down — the well-laid-out copy is strictly better
+// and keeping both just doubles the list in the output.
+function dedupeCrammedListHeaderLines(lines: string[]): string[] {
+  const bareIndexes = new Set<number>();
+  const bareTokens: string[] = [];
+  lines.forEach((line, i) => {
+    const m = LIST_HEADER_CAPTURE_RE.exec(line.trim());
+    LIST_HEADER_CAPTURE_RE.lastIndex = 0;
+    if (m && !m[2]) {
+      bareIndexes.add(i);
+      bareTokens[i] = normalizeListHeaderToken(m[1]);
+    }
+  });
+
+  return lines.filter((line, i) => {
+    if (bareIndexes.has(i)) return true;
+    const m = LIST_HEADER_CAPTURE_RE.exec(line.trim());
+    LIST_HEADER_CAPTURE_RE.lastIndex = 0;
+    if (!m || !m[2]) return true; // not a crammed header line
+    const token = normalizeListHeaderToken(m[1]);
+    const hasLaterBareRepeat = [...bareIndexes].some((j) => j > i && bareTokens[j] === token);
+    return !hasLaterBareRepeat;
+  });
+}
+
+// Numbers the unmarked "statement" lines that follow a "consider the
+// following statements" cue, up to the closing "which of the above is/are
+// correct" line — source text conventionally lists these as 1/2/3 (matching
+// option text like "only 1 and 2"), but frequently omits the markers.
+// Lines that already carry a marker are left untouched, but still advance
+// the counter so a partially-numbered set doesn't end up renumbered.
+function autoNumberStatementLines(lines: string[]): string[] {
+  let inStatements = false;
+  let counter = 0;
+
+  return lines.map((line) => {
+    const trimmed = line.trim();
+
+    if (!inStatements) {
+      if (STATEMENTS_CUE_RE.test(trimmed)) {
+        inStatements = true;
+        counter = 0;
+      }
+      return line;
+    }
+
+    if (trimmed === '' || STATEMENTS_CLOSING_CUE_RE.test(trimmed)) {
+      inStatements = false;
+      return line;
+    }
+
+    counter += 1;
+    if (LEADING_MARKER_RE.test(trimmed)) return line;
+    return `${counter}. ${trimmed}`;
+  });
+}
+
+// Pushes previously-collected "options" back into the stem as plain
+// "a. text" lines, for when they turn out to have been a List-I column
+// rather than real answer choices. Shared by the isRestart, CODE_HINT_RE,
+// and LIST_HEADER_RE cases below.
+function revertOptionLinesToStem(current: RawQuestionBlock) {
+  for (const o of current.optionLines) {
+    current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
+  }
+  current.optionLines = [];
+}
+
+// Splits a single line that may contain more than one option marker (see
+// INLINE_OPTION_MARKER_RE) into its individual options. `firstLetter` is the
+// letter already matched at the start of the line; `text` is everything
+// after it. Returns a single-item array unchanged when no further in-order
+// marker is found, so normal one-option-per-line input is untouched.
+function splitInlineOptions(
+  firstLetter: string,
+  text: string,
+): { letter: string; text: string }[] {
+  let expected = String.fromCharCode(firstLetter.charCodeAt(0) + 1);
+  const cuts: { index: number; letter: string; markerLength: number }[] = [];
+
+  INLINE_OPTION_MARKER_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = INLINE_OPTION_MARKER_RE.exec(text))) {
+    const letter = match[1].toUpperCase();
+    if (letter === expected) {
+      cuts.push({ index: match.index, letter, markerLength: match[0].length });
+      expected = String.fromCharCode(expected.charCodeAt(0) + 1);
+    }
+  }
+
+  if (cuts.length === 0) return [{ letter: firstLetter, text: text.trim() }];
+
+  const result = [{ letter: firstLetter, text: text.slice(0, cuts[0].index).trim() }];
+  cuts.forEach((cut, i) => {
+    const start = cut.index + cut.markerLength;
+    const end = i + 1 < cuts.length ? cuts[i + 1].index : text.length;
+    result.push({ letter: cut.letter, text: text.slice(start, end).trim() });
+  });
+  return result;
+}
+
 interface RawQuestionBlock {
   sourceIndex: number;
   questionLines: string[];
@@ -119,7 +259,7 @@ function splitIntoBlocks(text: string): {
   blocks: RawQuestionBlock[];
   preamble: string[];
 } {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = dedupeCrammedListHeaderLines(text.replace(/\r\n/g, '\n').split('\n'));
 
   const blocks: RawQuestionBlock[] = [];
   const preamble: string[] = [];
@@ -229,18 +369,22 @@ function splitIntoBlocks(text: string): {
         letter === 'A' &&
         current.optionLines[current.optionLines.length - 1].letter !== 'A';
 
-      if (isRestart) {
-        for (const o of current.optionLines) {
-          current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
-        }
-        current.optionLines = [];
-      }
+      if (isRestart) revertOptionLinesToStem(current);
 
       mode = 'options';
-      current.optionLines.push({
-        letter,
-        text: optMatch[2],
-      });
+      for (const opt of splitInlineOptions(letter, optMatch[2])) {
+        current.optionLines.push(opt);
+      }
+      continue;
+    }
+
+    if (LIST_HEADER_RE.test(trimmed)) {
+      if (mode === 'options' && current.optionLines.length > 0) {
+        revertOptionLinesToStem(current);
+      }
+      mode = 'question';
+      qSubMode = 'stem';
+      current.questionLines.push(line);
       continue;
     }
 
@@ -257,10 +401,7 @@ function splitIntoBlocks(text: string): {
     // being the dedicated codes-hint line itself.
     if (CODE_HINT_RE.test(line)) {
       if (mode === 'options' && current.optionLines.length > 0) {
-        for (const o of current.optionLines) {
-          current.questionLines.push(`${o.letter.toLowerCase()}. ${o.text}`);
-        }
-        current.optionLines = [];
+        revertOptionLinesToStem(current);
       }
       mode = 'question';
       qSubMode = 'stem';
@@ -392,7 +533,7 @@ function buildQuestion(
   }
 
   const questionImageIndices: number[] = [];
-  for (const line of block.questionLines) {
+  for (const line of autoNumberStatementLines(block.questionLines)) {
     const { cleaned, indices } = extractImageSentinels(line);
     questionLinesNoSentinels.push(punctuateSubStatementMarker(cleaned));
     questionImageIndices.push(...indices);

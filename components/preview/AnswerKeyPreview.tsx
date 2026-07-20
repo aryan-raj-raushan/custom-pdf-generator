@@ -15,6 +15,7 @@ import {
 interface AnswerKeyPreviewProps {
   paper: ExamPaper;
   columns?: ColumnCount;
+  columnSeparators?: boolean;
   fontSize?: number;
   active?: boolean;
   hideSolutions?: boolean;
@@ -301,7 +302,10 @@ function AnswerFragmentBlock({
 }
 
 export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPreviewProps>(
-  ({ paper, columns = 2, fontSize = 11, active = true, hideSolutions = false }, ref) => {
+  (
+    { paper, columns = 2, columnSeparators = true, fontSize = 11, active = true, hideSolutions = false },
+    ref,
+  ) => {
     const showHi = paper.metadata.language !== 'en';
     const showEn = paper.metadata.language !== 'hi';
     const sizes = getAnswerSizes(fontSize);
@@ -602,7 +606,13 @@ export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPrevie
                   key={columnIndex}
                   data-flow-column="true"
                   className="min-w-0"
-                  style={{ width: COLUMN_MEASURE_WIDTHS[columns], flex: '0 0 auto' }}
+                  style={{
+                    width: COLUMN_MEASURE_WIDTHS[columns],
+                    flex: '0 0 auto',
+                    ...(columnSeparators && columnIndex < pageColumns.length - 1
+                      ? { borderRight: `1px solid ${PREVIEW_COLORS.ruleSoft}` }
+                      : undefined),
+                  }}
                 >
                   {columnIds.map((id) => {
                     const textRange = textRanges.get(id);

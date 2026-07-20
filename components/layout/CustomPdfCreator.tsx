@@ -45,6 +45,27 @@ export const DEFAULT_INSTRUCTIONS_HI = [
   'रफ कार्य केवल दिए गए स्थान पर ही करें।',
 ];
 
+// Exported PDF file names must always carry the project name (the name the
+// user gave this document on the dashboard) so files stay identifiable once
+// downloaded — extra details (exam code/title) are appended, not swapped in.
+function sanitizeFileNamePart(part: string): string {
+  return part
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+export function buildExportFileName(
+  initialName: string | undefined,
+  metadata: ExamMetadata,
+): string {
+  const projectName = sanitizeFileNamePart(initialName || 'Untitled paper');
+  const extra = sanitizeFileNamePart(metadata.examCode || metadata.examTitle || '');
+  return extra && extra.toLowerCase() !== projectName.toLowerCase()
+    ? `${projectName} - ${extra}`
+    : projectName;
+}
+
 export type Language = 'en' | 'hi';
 export type QuestionType = 'mcq' | 'short' | 'long' | 'assertion_reason';
 export type Subject = 'general' | 'mathematics' | 'reasoning' | 'english' | 'hindi' | 'gk';
@@ -68,6 +89,7 @@ export function createEmptyMetadata(): ExamMetadata {
     marksPerQuestion: 1,
     language: 'bilingual',
     columns: 2, // default layout
+    columnSeparators: true,
     fontSize: 11,
     footerText: 'Test PDF',
     headerFontSizes: {
@@ -283,6 +305,13 @@ export function CustomPdfCreator({
     }));
   }
 
+  function handleColumnSeparatorsChange(columnSeparators: boolean) {
+    setPaper((p) => ({
+      ...p,
+      metadata: { ...p.metadata, columnSeparators },
+    }));
+  }
+
   function handleFontSizeChange(fontSize: number) {
     setPaper((p) => ({
       ...p,
@@ -360,7 +389,7 @@ export function CustomPdfCreator({
           <ExportPdfDropdown
             previewRef={previewRef}
             answerKeyRef={answerKeyRef}
-            fileName={paper.metadata.examCode || paper.metadata.examTitle || 'question-paper'}
+            fileName={buildExportFileName(initialName, paper.metadata)}
             highlightedPreviewRef={highlightedPreviewRef}
             answerGridOnlyRef={answerGridOnlyRef}
             disabled={
@@ -485,6 +514,7 @@ export function CustomPdfCreator({
             highlightedQuestionId={highlightedQuestionId}
             jumpToken={jumpToken}
             onColumnsChange={handleColumnsChange}
+            onColumnSeparatorsChange={handleColumnSeparatorsChange}
             onFontSizeChange={handleFontSizeChange}
             highlightedPreviewRef={highlightedPreviewRef}
             answerGridOnlyRef={answerGridOnlyRef}

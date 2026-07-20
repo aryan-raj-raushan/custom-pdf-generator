@@ -32,6 +32,8 @@ export interface ExamMetadata {
 
   /** Layout preference persisted with the paper: 1 | 2 | 3 columns. Default 2. */
   columns?: 1 | 2 | 3;
+  /** Whether to draw a vertical rule between columns. Default true. */
+  columnSeparators?: boolean;
   fontSize?: number;
   headerFontSizes?: {
     organisation?: number;

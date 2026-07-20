@@ -25,6 +25,8 @@ interface PreviewPanelProps {
   jumpToken?: number;
   /** Called when the user changes the column selector */
   onColumnsChange?: (columns: ColumnCount) => void;
+  /** Called when the user toggles column separator lines */
+  onColumnSeparatorsChange?: (enabled: boolean) => void;
   /** Called when the user changes font size */
   onFontSizeChange?: (fontSize: number) => void;
   highlightedPreviewRef: React.RefObject<HTMLDivElement>;
@@ -59,6 +61,7 @@ export function PreviewPanel({
   highlightedQuestionId,
   jumpToken,
   onColumnsChange,
+  onColumnSeparatorsChange,
   onFontSizeChange,
   highlightedPreviewRef,
   answerGridOnlyRef,
@@ -76,6 +79,10 @@ export function PreviewPanel({
 
   const [columns, setColumns] = useState<ColumnCount>((paper.metadata.columns ?? 2) as ColumnCount);
 
+  const [columnSeparators, setColumnSeparators] = useState<boolean>(
+    paper.metadata.columnSeparators ?? true,
+  );
+
   const [fontSize, setFontSize] = useState<number>(paper.metadata.fontSize ?? FONT_SIZE_DEFAULT);
 
   // Sync if a different paper is loaded
@@ -83,6 +90,11 @@ export function PreviewPanel({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setColumns((paper.metadata.columns ?? 2) as ColumnCount);
   }, [paper.metadata.columns]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setColumnSeparators(paper.metadata.columnSeparators ?? true);
+  }, [paper.metadata.columnSeparators]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -102,6 +114,12 @@ export function PreviewPanel({
   function handleColumnsChange(value: ColumnCount) {
     setColumns(value);
     onColumnsChange?.(value);
+  }
+
+  function handleColumnSeparatorsToggle() {
+    const next = !columnSeparators;
+    setColumnSeparators(next);
+    onColumnSeparatorsChange?.(next);
   }
 
   function handleFontSizeChange(value: number) {
@@ -213,6 +231,19 @@ export function PreviewPanel({
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              title={columnSeparators ? 'Remove column separator lines' : 'Add column separator lines'}
+              onClick={handleColumnSeparatorsToggle}
+              disabled={columns === 1}
+              className={`ml-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                columnSeparators
+                  ? 'border-stone-900 bg-stone-900 text-white'
+                  : 'border-stone-200 bg-white text-stone-500 hover:bg-stone-50'
+              }`}
+            >
+              Separators
+            </button>
           </div>
 
           {/* Font size control */}
@@ -368,6 +399,7 @@ export function PreviewPanel({
             ref={highlightedPreviewRef}
             paper={paper}
             columns={columns}
+            columnSeparators={columnSeparators}
             fontSize={fontSize}
             active
             highlightCorrectAnswers
@@ -388,6 +420,7 @@ export function PreviewPanel({
             ref={answerGridOnlyRef}
             paper={paper}
             columns={columns}
+            columnSeparators={columnSeparators}
             fontSize={fontSize}
             active
             hideSolutions
@@ -420,6 +453,7 @@ export function PreviewPanel({
               paper={paper}
               highlightedQuestionId={highlightedQuestionId}
               columns={columns}
+              columnSeparators={columnSeparators}
               fontSize={fontSize}
               active
             />
@@ -445,6 +479,7 @@ export function PreviewPanel({
               ref={answerKeyRef}
               paper={paper}
               columns={columns}
+              columnSeparators={columnSeparators}
               fontSize={fontSize}
               active
             />

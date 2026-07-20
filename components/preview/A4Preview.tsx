@@ -32,6 +32,7 @@ interface A4PreviewProps {
   paper: ExamPaper;
   highlightedQuestionId?: string | null;
   columns?: ColumnCount;
+  columnSeparators?: boolean;
   fontSize?: number;
   active?: boolean;
   highlightCorrectAnswers?: boolean;
@@ -442,6 +443,7 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
       paper,
       highlightedQuestionId,
       columns = 2,
+      columnSeparators = true,
       fontSize = FONT_SIZE_DEFAULT,
       active = true,
       highlightCorrectAnswers = false,
@@ -517,7 +519,13 @@ export const A4Preview = React.forwardRef<HTMLDivElement, A4PreviewProps>(
                   key={columnIndex}
                   data-flow-column="true"
                   className="min-w-0"
-                  style={{ width: COLUMN_MEASURE_WIDTHS[columns], flex: '0 0 auto' }}
+                  style={{
+                    width: COLUMN_MEASURE_WIDTHS[columns],
+                    flex: '0 0 auto',
+                    ...(columnSeparators && columnIndex < pageBlockIds.length - 1
+                      ? { borderRight: `1px solid ${PREVIEW_COLORS.ruleSoft}` }
+                      : undefined),
+                  }}
                 >
                   {columnIds.map((id) => {
                     const textRange = textRanges.get(id);
