@@ -10,6 +10,7 @@ import {
   exportHighlightedPdf,
 } from '@/lib/exportPdf';
 import { ExportProgressOverlay } from './ExportProgressOverlay';
+import { ExportFileNameModal } from './ExportFileNameModal';
 
 interface ExportPdfDropdownProps {
   previewRef: React.RefObject<HTMLDivElement>;
@@ -34,6 +35,10 @@ export function ExportPdfDropdown({
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ExportKindExtended | null>(null);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
+  const [pendingKind, setPendingKind] = useState<ExportKindExtended | null>(null);
+  // Remembers the last file name the user typed so subsequent exports default
+  // to it instead of falling back to the project name every time.
+  const [lastFileName, setLastFileName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,8 +52,13 @@ export function ExportPdfDropdown({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [open]);
 
-  async function runExport(kind: ExportKindExtended) {
+  function requestExport(kind: ExportKindExtended) {
     setOpen(false);
+    if (exporting) return;
+    setPendingKind(kind);
+  }
+
+  async function runExport(kind: ExportKindExtended, baseFileName: string) {
     if (exporting) return;
     setExporting(kind);
     setProgress({
@@ -62,32 +72,32 @@ export function ExportPdfDropdown({
       if (kind === 'combined') {
         if (!previewRef.current || !answerKeyRef.current) return;
         await exportCombinedPreviewToPdf(previewRef.current, answerKeyRef.current, {
-          fileName: `${fileName}-with-solutions`,
+          fileName: baseFileName,
           onProgress: setProgress,
         });
       } else if (kind === 'paperWithAnswerKey') {
         if (!previewRef.current || !answerGridOnlyRef.current) return;
         await exportCombinedPreviewToPdf(previewRef.current, answerGridOnlyRef.current, {
-          fileName: `${fileName}-with-answer-key`,
+          fileName: baseFileName,
           onProgress: setProgress,
         });
       } else if (kind === 'paper') {
         if (!previewRef.current) return;
         await exportPreviewToPdf(previewRef.current, {
-          fileName,
+          fileName: baseFileName,
           pageClassName: 'pdf-page',
           onProgress: setProgress,
         });
       } else if (kind === 'highlighted') {
         if (!highlightedPreviewRef.current || !answerGridOnlyRef.current) return;
         await exportHighlightedPdf(highlightedPreviewRef.current, answerGridOnlyRef.current, {
-          fileName: `${fileName}-highlighted`,
+          fileName: baseFileName,
           onProgress: setProgress,
         });
       } else {
         if (!answerKeyRef.current) return;
         await exportPreviewToPdf(answerKeyRef.current, {
-          fileName: `${fileName}-answer-key`,
+          fileName: baseFileName,
           pageClassName: 'answer-key-page',
           onProgress: setProgress,
         });
@@ -98,6 +108,13 @@ export function ExportPdfDropdown({
       setExporting(null);
       setProgress(null);
     }
+  }
+
+  function handleConfirmFileName(chosenName: string) {
+    const kind = pendingKind;
+    setPendingKind(null);
+    setLastFileName(chosenName);
+    if (kind) void runExport(kind, chosenName);
   }
 
   return (
@@ -115,7 +132,7 @@ export function ExportPdfDropdown({
         <div className="absolute right-0 top-full z-20 mt-2 w-60 rounded-xl border border-stone-200 bg-white p-1.5 shadow-lg">
           <button
             type="button"
-            onClick={() => runExport('combined')}
+            onClick={() => requestExport('combined')}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-900 hover:bg-stone-100"
           >
             <FileStack size={14} />
@@ -128,7 +145,7 @@ export function ExportPdfDropdown({
           </button>
           <button
             type="button"
-            onClick={() => runExport('paperWithAnswerKey')}
+            onClick={() => requestExport('paperWithAnswerKey')}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-900 hover:bg-stone-100"
           >
             <FileStack size={14} />
@@ -141,7 +158,7 @@ export function ExportPdfDropdown({
           </button>
           <button
             type="button"
-            onClick={() => runExport('paper')}
+            onClick={() => requestExport('paper')}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
           >
             <Download size={14} />
@@ -149,7 +166,7 @@ export function ExportPdfDropdown({
           </button>
           <button
             type="button"
-            onClick={() => runExport('answerKey')}
+            onClick={() => requestExport('answerKey')}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
           >
             <KeyRound size={14} />
@@ -157,7 +174,7 @@ export function ExportPdfDropdown({
           </button>
           <button
             type="button"
-            onClick={() => runExport('highlighted')}
+            onClick={() => requestExport('highlighted')}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
           >
             <CheckCircle2 size={14} />
@@ -172,6 +189,13 @@ export function ExportPdfDropdown({
       ) : null}
 
       <ExportProgressOverlay progress={progress} />
+
+      <ExportFileNameModal
+        open={pendingKind !== null}
+        defaultValue={lastFileName ?? fileName}
+        onCancel={() => setPendingKind(null)}
+        onConfirm={handleConfirmFileName}
+      />
     </div>
   );
 }
