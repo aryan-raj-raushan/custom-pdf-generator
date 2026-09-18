@@ -233,7 +233,9 @@ export function PreviewPanel({
             </div>
             <button
               type="button"
-              title={columnSeparators ? 'Remove column separator lines' : 'Add column separator lines'}
+              title={
+                columnSeparators ? 'Remove column separator lines' : 'Add column separator lines'
+              }
               onClick={handleColumnSeparatorsToggle}
               disabled={columns === 1}
               className={`ml-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${

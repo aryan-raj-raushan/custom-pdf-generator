@@ -45,20 +45,29 @@ export function BulkImportModal({ open, onClose, onImport }: Readonly<BulkImport
   // input text itself — it's passed alongside as a sentinel map, see
   // bulkImportParser's `images` option.
   const [docxImages, setDocxImages] = useState<Map<number, string>>(new Map());
+  const [docxMatchingTables, setDocxMatchingTables] = useState<
+    Map<number, import('@/types/exam').MatchingTable>
+  >(new Map());
   const [docxFileName, setDocxFileName] = useState<string | null>(null);
   const [docxStatus, setDocxStatus] = useState<'idle' | 'reading' | 'error'>('idle');
   const [docxError, setDocxError] = useState<string | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   const result = useMemo(
-    () => parseBulkImportText(text, { defaultSubject: subject, images: docxImages }),
-    [text, subject, docxImages],
+    () =>
+      parseBulkImportText(text, {
+        defaultSubject: subject,
+        images: docxImages,
+        matchingTables: docxMatchingTables,
+      }),
+    [text, subject, docxImages, docxMatchingTables],
   );
   const hasContent = text.trim().length > 0;
 
   function resetAll() {
     setText('');
     setDocxImages(new Map());
+    setDocxMatchingTables(new Map());
     setDocxFileName(null);
     setDocxStatus('idle');
     setDocxError(null);
@@ -101,6 +110,7 @@ export function BulkImportModal({ open, onClose, onImport }: Readonly<BulkImport
       const extraction = await extractDocxForImport(file);
       setText(extraction.text);
       setDocxImages(extraction.images);
+      setDocxMatchingTables(extraction.matchingTables);
       setDocxStatus('idle');
     } catch (err) {
       setDocxStatus('error');
@@ -109,6 +119,7 @@ export function BulkImportModal({ open, onClose, onImport }: Readonly<BulkImport
       );
       setText('');
       setDocxImages(new Map());
+      setDocxMatchingTables(new Map());
     }
   }, []);
 

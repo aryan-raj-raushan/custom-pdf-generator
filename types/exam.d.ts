@@ -101,6 +101,17 @@ export interface QuestionOption {
   imageDataUrl?: string; // optional option image (e.g. figure-based options)
 }
 
+export interface MatchingCell {
+  textEn: string;
+  textHi?: string;
+}
+
+export interface MatchingTable {
+  headerA: string;
+  headerB: string;
+  rows: { a: MatchingCell; b: MatchingCell }[];
+}
+
 export interface ImportFlag {
   type:
     | 'missing_answer' // no "Answer: X" line found for an MCQ
@@ -119,6 +130,7 @@ export interface Question {
   subject: 'general' | 'mathematics' | 'reasoning' | 'english' | 'hindi' | 'gk';
   textEn: string;
   textHi?: string;
+  matchingTable?: MatchingTable;
   hasMath?: boolean;
   options?: QuestionOption[]; // for mcq AND assertion_reason (the A/B/C/D "codes")
   marks?: number;

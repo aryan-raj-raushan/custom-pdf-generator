@@ -21,7 +21,7 @@
 //     image_question/image_option text-cue flags.
 
 import { ImportFlagType, Subject } from '@/components/layout/CustomPdfCreator';
-import { Question, QuestionOption, ImportFlag } from '@/types/exam';
+import { Question, QuestionOption, ImportFlag, MatchingTable } from '@/types/exam';
 
 export interface BulkImportResult {
   questions: Question[];
@@ -117,6 +117,7 @@ const EMPTY_OR_IMAGE_OPTION_RE = /^\s*(image|img|चित्र|figure|आक�
 // can contain more than one — e.g. a question stem with an inline figure
 // followed by an option whose entire content is a diagram.
 const IMAGE_SENTINEL_RE = /\[\[IMG:(\d+)\]\]/g;
+const MATCH_TABLE_SENTINEL_RE = /^\[\[MATCH_TABLE:(\d+)\]\]$/;
 
 // A bare numbered or roman-numeral sub-statement marker at the start of a
 // continuation line — "1 सर्वोच्च..." / "i अपरिमेय..." / "iii जिसका..." —
@@ -220,10 +221,7 @@ function revertOptionLinesToStem(current: RawQuestionBlock) {
 // letter already matched at the start of the line; `text` is everything
 // after it. Returns a single-item array unchanged when no further in-order
 // marker is found, so normal one-option-per-line input is untouched.
-function splitInlineOptions(
-  firstLetter: string,
-  text: string,
-): { letter: string; text: string }[] {
+function splitInlineOptions(firstLetter: string, text: string): { letter: string; text: string }[] {
   let expected = String.fromCharCode(firstLetter.charCodeAt(0) + 1);
   const cuts: { index: number; letter: string; markerLength: number }[] = [];
 
@@ -500,6 +498,7 @@ function buildQuestion(
   block: RawQuestionBlock,
   defaultSubject: Subject,
   images?: Map<number, string>,
+  matchingTables?: Map<number, MatchingTable>,
 ): Question {
   const flags: ImportFlag[] = [];
 
@@ -507,6 +506,7 @@ function buildQuestion(
   // (sentinels are ASCII bracket tokens and would otherwise dilute the
   // Devanagari-ratio check on short Hindi questions).
   const questionLinesNoSentinels: string[] = [];
+  let matchingTable: MatchingTable | undefined;
 
   // Assertion/Reason text — same sentinel-stripping treatment as the stem,
   // in case a docx import embedded a figure inside the assertion or reason.
@@ -540,13 +540,31 @@ function buildQuestion(
   }
 
   const questionImageIndices: number[] = [];
-  for (const line of autoNumberStatementLines(block.questionLines)) {
+  const stemLines = block.questionLines.filter((line) => {
+    const tableMatch = MATCH_TABLE_SENTINEL_RE.exec(line.trim());
+    if (tableMatch) {
+      matchingTable = matchingTables?.get(Number(tableMatch[1]));
+      return false;
+    }
+    return true;
+  });
+  for (const line of autoNumberStatementLines(stemLines)) {
     const { cleaned, indices } = extractImageSentinels(line);
     questionLinesNoSentinels.push(punctuateSubStatementMarker(cleaned));
     questionImageIndices.push(...indices);
   }
 
-  const { en: textEn, hi: textHi } = detectLanguageSplit(questionLinesNoSentinels);
+  const { en: rawTextEn, hi: rawTextHi } = detectLanguageSplit(questionLinesNoSentinels);
+  // Keep currency amounts (for example ₹27.49 or $27.49) on one line in
+  // narrow question columns. Ordinary decimal values retain their usual
+  // wrapping behavior.
+  const keepCurrencyDecimalsTogether = (text: string) =>
+    text.replace(
+      /(₹|₨|\$|€|£|¥|￥|₩|฿|₽|﷼|Rs\.?|INR|USD|EUR|GBP|JPY|CNY|RMB|CAD|AUD|NZD|CHF|AED|SAR|PKR|BDT|NPR|LKR|৳|₱|₫|₪|₺|₴|₦|₡|₲|₵|₭|₮|₸|֏|؋|ƒ|Kč|zł|kr|руб\.?)(\s*\d+(?:,\d{3})*)(\.)(?=\d)/gi,
+      '$1$2\u2060$3\u2060',
+    );
+  const textEn = keepCurrencyDecimalsTogether(rawTextEn);
+  const textHi = keepCurrencyDecimalsTogether(rawTextHi);
   const fullQuestionText = (textEn + ' ' + textHi).replace(/\n/g, ' ').trim();
 
   const isMcq = block.optionLines.length > 0;
@@ -651,6 +669,7 @@ function buildQuestion(
     subject: defaultSubject,
     textEn,
     textHi,
+    matchingTable,
     hasMath: /\$[^$]+\$/.test(fullQuestionText),
     options,
     imageDataUrl: resolvedQuestionImage,
@@ -678,6 +697,7 @@ export interface BulkImportOptions {
    * the parser behaves exactly as before when this isn't supplied.
    */
   images?: Map<number, string>;
+  matchingTables?: Map<number, MatchingTable>;
 }
 
 export function parseBulkImportText(
@@ -698,7 +718,9 @@ export function parseBulkImportText(
 
   const { blocks, preamble } = splitIntoBlocks(text);
 
-  const questions = blocks.map((b) => buildQuestion(b, defaultSubject, options.images));
+  const questions = blocks.map((b) =>
+    buildQuestion(b, defaultSubject, options.images, options.matchingTables),
+  );
   const flaggedQuestions = questions.filter((q) => (q.importFlags?.length ?? 0) > 0);
 
   // Preamble lines containing only image sentinels (e.g. a letterhead

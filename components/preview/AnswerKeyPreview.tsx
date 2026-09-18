@@ -303,7 +303,14 @@ function AnswerFragmentBlock({
 
 export const AnswerKeyPreview = React.forwardRef<HTMLDivElement, AnswerKeyPreviewProps>(
   (
-    { paper, columns = 2, columnSeparators = true, fontSize = 11, active = true, hideSolutions = false },
+    {
+      paper,
+      columns = 2,
+      columnSeparators = true,
+      fontSize = 11,
+      active = true,
+      hideSolutions = false,
+    },
     ref,
   ) => {
     const showHi = paper.metadata.language !== 'en';
