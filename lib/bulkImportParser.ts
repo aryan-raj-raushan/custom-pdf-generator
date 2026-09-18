@@ -220,10 +220,7 @@ function revertOptionLinesToStem(current: RawQuestionBlock) {
 // letter already matched at the start of the line; `text` is everything
 // after it. Returns a single-item array unchanged when no further in-order
 // marker is found, so normal one-option-per-line input is untouched.
-function splitInlineOptions(
-  firstLetter: string,
-  text: string,
-): { letter: string; text: string }[] {
+function splitInlineOptions(firstLetter: string, text: string): { letter: string; text: string }[] {
   let expected = String.fromCharCode(firstLetter.charCodeAt(0) + 1);
   const cuts: { index: number; letter: string; markerLength: number }[] = [];
 
