@@ -546,7 +546,17 @@ function buildQuestion(
     questionImageIndices.push(...indices);
   }
 
-  const { en: textEn, hi: textHi } = detectLanguageSplit(questionLinesNoSentinels);
+  const { en: rawTextEn, hi: rawTextHi } = detectLanguageSplit(questionLinesNoSentinels);
+  // Keep currency amounts (for example ₹27.49 or $27.49) on one line in
+  // narrow question columns. Ordinary decimal values retain their usual
+  // wrapping behavior.
+  const keepCurrencyDecimalsTogether = (text: string) =>
+    text.replace(
+      /(₹|₨|\$|€|£|¥|￥|₩|฿|₽|﷼|Rs\.?|INR|USD|EUR|GBP|JPY|CNY|RMB|CAD|AUD|NZD|CHF|AED|SAR|PKR|BDT|NPR|LKR|৳|₱|₫|₪|₺|₴|₦|₡|₲|₵|₭|₮|₸|֏|؋|ƒ|Kč|zł|kr|руб\.?)(\s*\d+(?:,\d{3})*)(\.)(?=\d)/gi,
+      '$1$2\u2060$3\u2060',
+    );
+  const textEn = keepCurrencyDecimalsTogether(rawTextEn);
+  const textHi = keepCurrencyDecimalsTogether(rawTextHi);
   const fullQuestionText = (textEn + ' ' + textHi).replace(/\n/g, ' ').trim();
 
   const isMcq = block.optionLines.length > 0;
