@@ -327,6 +327,59 @@ function QuestionFragmentBlock({
   const renderPromptText = () => {
     const { enText, hiText } = resolveDisplayText(showEn, showHi, question.textEn, question.textHi);
 
+    if (question.matchingTable) {
+      const table = question.matchingTable;
+      const renderCell = (cell: { textEn: string; textHi?: string }) => {
+        const { enText: cellEn, hiText: cellHi } = resolveDisplayText(
+          showEn,
+          showHi,
+          cell.textEn,
+          cell.textHi,
+        );
+        return (
+          <>
+            {cellEn && <span>{cellEn}</span>}
+            {cellHi && (
+              <span
+                className="font-devanagari block"
+                style={{ color: PREVIEW_COLORS.quaternaryText }}
+              >
+                {cellHi}
+              </span>
+            )}
+          </>
+        );
+      };
+      return (
+        <div>
+          {enText && <div style={{ whiteSpace: 'pre-line' }}>{enText}</div>}
+          {hiText && (
+            <div
+              className="font-devanagari"
+              style={{ whiteSpace: 'pre-line', color: PREVIEW_COLORS.quaternaryText }}
+            >
+              {hiText}
+            </div>
+          )}
+          <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0">
+            <div className="font-semibold">{table.headerA}</div>
+            <div className="font-semibold">{table.headerB}</div>
+            {table.rows.map((row, i) => (
+              <React.Fragment key={i}>
+                <div className="min-w-0">{renderCell(row.a)}</div>
+                <div className="min-w-0">{renderCell(row.b)}</div>
+              </React.Fragment>
+            ))}
+          </div>
+          {!isContinuationPiece && (
+            <span className="ml-1 font-medium" style={{ color: PREVIEW_COLORS.secondaryText }}>
+              [{marks}]
+            </span>
+          )}
+        </div>
+      );
+    }
+
     // Match-the-following questions never carry math markup, so the plain
     // side-by-side layout takes priority over the mono/bilingual + LaTeX
     // rendering path below when the column-list shape is detected.

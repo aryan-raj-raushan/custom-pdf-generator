@@ -25,6 +25,7 @@
 // how to turn a docx into (text-with-sentinels, sentinel -> data URL map).
 
 import mammoth from 'mammoth';
+import type { MatchingCell, MatchingTable } from '@/types/exam';
 
 export const IMAGE_SENTINEL_RE = /\[\[IMG:(\d+)\]\]/g;
 
@@ -35,6 +36,7 @@ export interface DocxExtractionResult {
   images: Map<number, string>;
   /** Non-fatal issues mammoth reported while converting (missing styles etc.) — surfaced for debugging, not blocking */
   warnings: string[];
+  matchingTables: Map<number, MatchingTable>;
 }
 
 const BLOCK_TAGS = new Set(['P', 'LI', 'TD', 'TH', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
@@ -76,9 +78,9 @@ export async function extractDocxForImport(file: File): Promise<DocxExtractionRe
     .filter((m: { type: string }) => m.type === 'warning' || m.type === 'error')
     .map((m: { message: string }) => m.message);
 
-  const text = htmlToSentinelLines(result.value);
+  const { text, matchingTables } = htmlToSentinelLines(result.value);
 
-  return { text, images, warnings };
+  return { text, images, warnings, matchingTables };
 }
 
 /**
@@ -92,9 +94,14 @@ export async function extractDocxForImport(file: File): Promise<DocxExtractionRe
  * detection, which depends on paragraph boundaries matching pasted-text
  * line breaks.
  */
-function htmlToSentinelLines(html: string): string {
+function htmlToSentinelLines(html: string): {
+  text: string;
+  matchingTables: Map<number, MatchingTable>;
+} {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const lines: string[] = [];
+  const matchingTables = new Map<number, MatchingTable>();
+  let nextTableIndex = 0;
 
   function blockToLine(el: Element): string {
     let out = '';
@@ -123,25 +130,65 @@ function htmlToSentinelLines(html: string): string {
     return out;
   }
 
-  // Walk every block-level element in document order. Nested blocks (e.g.
-  // a <p> inside a <td>) are visited once at their own level only, since
-  // blockToLine already recurses into non-block children — to avoid
-  // double-counting we only treat top-level body children plus list/table
-  // descendants explicitly.
+  // Walk blocks in document order. Tables are handled as a unit so their
+  // row and cell boundaries remain available to matching-question import.
   const body = doc.body;
+
+  function cellText(cell: Element): string {
+    return (
+      Array.from(cell.querySelectorAll('p'))
+        .map((p) => blockToLine(p).trim())
+        .filter(Boolean)
+        .join(' ') || blockToLine(cell).trim()
+    );
+  }
+
+  function asMatchingCell(text: string): MatchingCell {
+    const devanagari = (text.match(/[\u0900-\u097F]/gu) ?? []).length;
+    return devanagari > text.length * 0.15 ? { textEn: '', textHi: text } : { textEn: text };
+  }
 
   function walk(node: Node) {
     node.childNodes.forEach((child) => {
       if (child.nodeType !== Node.ELEMENT_NODE) return;
       const el = child as Element;
+      if (el.tagName === 'TABLE') {
+        const rows = Array.from(el.querySelectorAll(':scope > tbody > tr, :scope > tr'));
+        const cellsByRow = rows.map((row) =>
+          Array.from(row.children).filter((c) => c.tagName === 'TD' || c.tagName === 'TH'),
+        );
+        const firstRow = cellsByRow[0] ?? [];
+        const headerA = firstRow[0] ? cellText(firstRow[0]) : '';
+        const headerB = firstRow[1] ? cellText(firstRow[1]) : '';
+        const isMatching =
+          /^column\s*a$/i.test(headerA) &&
+          /^column\s*b$/i.test(headerB) &&
+          cellsByRow.length > 2 &&
+          cellsByRow.every((r) => r.length === 2);
+        if (isMatching) {
+          const index = nextTableIndex++;
+          matchingTables.set(index, {
+            headerA,
+            headerB,
+            rows: cellsByRow
+              .slice(1)
+              .map((row) => ({
+                a: asMatchingCell(cellText(row[0])),
+                b: asMatchingCell(cellText(row[1])),
+              })),
+          });
+          lines.push(`[[MATCH_TABLE:${index}]]`);
+        } else {
+          cellsByRow.forEach((row) => {
+            const line = row.map(cellText).filter(Boolean).join('    ');
+            if (line) lines.push(line);
+          });
+        }
+        return;
+      }
       if (BLOCK_TAGS.has(el.tagName)) {
         const line = blockToLine(el).replace(/\s+/g, ' ').trim();
         if (line.length > 0) lines.push(line);
-        // Tables/lists can nest further blocks (e.g. a list inside a
-        // table cell) — recurse to catch those too.
-        if (el.tagName === 'TD' || el.tagName === 'TH') {
-          walk(el);
-        }
       } else {
         walk(el);
       }
@@ -150,5 +197,5 @@ function htmlToSentinelLines(html: string): string {
 
   walk(body);
 
-  return lines.join('\n');
+  return { text: lines.join('\n'), matchingTables };
 }
