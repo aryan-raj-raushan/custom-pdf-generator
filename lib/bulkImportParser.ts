@@ -128,7 +128,11 @@ const MATCH_TABLE_SENTINEL_RE = /^\[\[MATCH_TABLE:(\d+)\]\]$/;
 const BARE_NUMBER_MARKER_RE = /^(\d{1,2})\s+(\S.*)$/;
 const BARE_ROMAN_MARKER_RE = /^(i{1,3}|iv)\s+(\S.*)$/;
 
-const SUB_STATEMENT_MARKER_INLINE_RE = /(^|[।.:])\s*(\d{1,2}|i{1,3}|iv)\s+(?=\S)/gu;
+// A decimal fraction such as "721.60 में" must not be treated as a numbered
+// sub-statement. The dot alternative therefore only matches when it is not
+// itself preceded by a digit; sentence punctuation and real list markers keep
+// their existing normalization behavior.
+const SUB_STATEMENT_MARKER_INLINE_RE = /(^|[।:]|(?<!\d)\.)\s*(\d{1,2}|i{1,3}|iv)\s+(?=\S)/gu;
 
 function punctuateSubStatementMarker(line: string): string {
   return line.replace(SUB_STATEMENT_MARKER_INLINE_RE, (_match, prefix, marker) => {
@@ -560,8 +564,8 @@ function buildQuestion(
   // wrapping behavior.
   const keepCurrencyDecimalsTogether = (text: string) =>
     text.replace(
-      /(₹|₨|\$|€|£|¥|￥|₩|฿|₽|﷼|Rs\.?|INR|USD|EUR|GBP|JPY|CNY|RMB|CAD|AUD|NZD|CHF|AED|SAR|PKR|BDT|NPR|LKR|৳|₱|₫|₪|₺|₴|₦|₡|₲|₵|₭|₮|₸|֏|؋|ƒ|Kč|zł|kr|руб\.?)(\s*\d+(?:,\d{3})*)(\.)(?=\d)/gi,
-      '$1$2\u2060$3\u2060',
+      /(₹|₨|\$|€|£|¥|￥|₩|฿|₽|﷼|Rs\.?|INR|USD|EUR|GBP|JPY|CNY|RMB|CAD|AUD|NZD|CHF|AED|SAR|PKR|BDT|NPR|LKR|৳|₱|₫|₪|₺|₴|₦|₡|₲|₵|₭|₮|₸|֏|؋|ƒ|Kč|zł|kr|руб\.?)(\s*\d+(?:,\d{3})*\.\d+)/gi,
+      (_match, currency: string, amount: string) => `${currency}${[...amount].join('\u2060')}`,
     );
   const textEn = keepCurrencyDecimalsTogether(rawTextEn);
   const textHi = keepCurrencyDecimalsTogether(rawTextHi);
