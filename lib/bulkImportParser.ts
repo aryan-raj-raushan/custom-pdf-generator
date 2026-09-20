@@ -132,10 +132,13 @@ const BARE_ROMAN_MARKER_RE = /^(i{1,3}|iv)\s+(\S.*)$/;
 // sub-statement. The dot alternative therefore only matches when it is not
 // itself preceded by a digit; sentence punctuation and real list markers keep
 // their existing normalization behavior.
-const SUB_STATEMENT_MARKER_INLINE_RE = /(^|[।:]|(?<!\d)\.)\s*(\d{1,2}|i{1,3}|iv)\s+(?=\S)/gu;
+const SUB_STATEMENT_MARKER_INLINE_RE = /(^|[।:]|(?<!\d)\.)\s*(\d{1,2}|i{1,3}|iv)\s+(?!:)(?=\S)/gu;
 
 function punctuateSubStatementMarker(line: string): string {
-  return line.replace(SUB_STATEMENT_MARKER_INLINE_RE, (_match, prefix, marker) => {
+  return line.replace(SUB_STATEMENT_MARKER_INLINE_RE, (_match, prefix, marker, offset, whole) => {
+    // A ratio such as "16 : 258" or "8 : 4" uses the same colon + number
+    // shape as an inline numbered statement. Keep that expression together.
+    if (prefix === ':' && /\d\s*$/.test(whole.slice(0, offset))) return _match;
     // No newline before the very first marker if it's at the start of the
     // string (nothing to break away from yet).
     const lineBreak = prefix === '' ? '' : '\n';
@@ -294,20 +297,21 @@ function splitIntoBlocks(text: string): {
     const candidateNumber = qMatch ? parseInt(qMatch[1], 10) : null;
     const hasTextOnSameLine = qMatch ? qMatch[2].trim().length > 0 : false;
 
-    // A line is treated as a NEW question start if it matches the numbering
-    // pattern with text on the same line, AND one of:
-    //  (a) we're not yet inside an options block (mode is "question" or
-    //      "solution") — the common, low-ambiguity case, OR
-    //  (b) we ARE inside an options block, but the number is "sequential
-    //      enough" (greater than the last question's number, and not a
-    //      small number like 1-4 that's far more likely to be a
-    //      sub-statement or a coincidental option-text digit). This lets a
-    //      question that's missing its Answer:/Solution: lines still end
-    //      correctly when the next real question begins, instead of
-    //      silently swallowing everything after it.
+    // A line is treated as a NEW question start only when its number moves
+    // forward from the current question. Ratio expressions such as
+    // "16 : 258 :: 25 : ?" and numbered solution steps such as "1 ..."
+    // otherwise look like question starts to the permissive numbering regex.
+    // In options mode we require the exact next number because a missing
+    // Answer:/Solution: line can leave numbered option text in that mode.
     const isSequential = candidateNumber !== null && candidateNumber === lastSourceIndex + 1;
+    // Numbered solution steps commonly look exactly like question starts
+    // (for example, "1 अनुपात 8 :" or "4 × 3.2 = 12.8."). Once a
+    // solution has started, only a number after the current question number
+    // can begin the next question. This keeps steps 1–9 inside question 130
+    // while still allowing the real question 131 to start the next block.
+    const isAfterCurrentQuestion = candidateNumber !== null && candidateNumber > lastSourceIndex;
     const looksLikeNewQuestion =
-      qMatch && hasTextOnSameLine && (mode !== 'options' || isSequential);
+      qMatch && hasTextOnSameLine && (mode === 'options' ? isSequential : isAfterCurrentQuestion);
 
     if (looksLikeNewQuestion && qMatch && candidateNumber !== null) {
       pushCurrent();
